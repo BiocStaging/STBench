@@ -1,0 +1,40 @@
+Package: SpatialNormBench
+Type: Package
+Title: Normalisation and Benchmarking for Spatial Transcriptomics
+Version: 0.1.0
+Authors@R:
+    person(
+        given = "Your",
+        family = "Name",
+        role = c("aut", "cre"),
+        email = "your@email.com"
+    )
+Description: Provides a unified framework for applying and benchmarking
+    normalisation methods for spatial transcriptomics data. The package
+    supports multiple normalisation approaches, spatially variable gene
+    analysis, marker gene evaluation, spatial expression visualisation,
+    and stable gene-set benchmarking.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+Imports:
+    ggplot2,
+    dplyr,
+    SummarizedExperiment,
+    SingleCellExperiment,
+    SpatialExperiment,
+    scran,
+    scater,
+    sctransform,
+    viridis,
+    patchwork,
+    SingleR,
+    Polychrome,
+    clusterProfiler
+Suggests:
+    testthat (>= 3.0.0),
+    nnSVG,
+    SpaNorm,
+    Giotto
+Config/testthat/edition: 3
