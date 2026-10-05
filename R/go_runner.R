@@ -720,7 +720,7 @@ plot_go <- function(
       ]
 
 
-      head(
+      utils::head(
         x,
         top_n
       )
@@ -999,7 +999,7 @@ plot_go_genes <- function(
       ]
 
 
-      head(
+      utils::head(
         x,
         top_n
       )

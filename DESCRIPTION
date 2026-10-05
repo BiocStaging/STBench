@@ -1,4 +1,4 @@
-Package: SpatialNormBench
+Package: STBench
 Type: Package
 Title: Normalisation and Benchmarking for Spatial Transcriptomics
 Version: 0.1.0
@@ -16,7 +16,6 @@ Description: Provides a unified framework for applying and benchmarking
     and stable gene-set benchmarking.
 License: MIT + file LICENSE
 Encoding: UTF-8
-LazyData: true
 RoxygenNote: 7.3.3
 Imports:
     ggplot2,
@@ -31,10 +30,16 @@ Imports:
     patchwork,
     SingleR,
     Polychrome,
-    clusterProfiler
+    clusterProfiler,
+    mclust,
+    scales,
+    methods,
+    rlang,
+    MatrixGenerics,
+    tibble,
 Suggests:
-    testthat (>= 3.0.0),
     nnSVG,
     SpaNorm,
-    Giotto
-Config/testthat/edition: 3
+    Giotto,
+    Banksy
+URL: https://lahiru-lsb.github.io/STBench/
