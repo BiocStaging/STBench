@@ -41,5 +41,8 @@ Suggests:
     nnSVG,
     SpaNorm,
     Giotto,
-    Banksy
+    Banksy,
+    knitr,
+    rmarkdown
 URL: https://lahiru-lsb.github.io/STBench/
+VignetteBuilder: knitr
