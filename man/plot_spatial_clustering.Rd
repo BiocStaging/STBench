@@ -13,43 +13,51 @@ plot_spatial_clustering(
   palette = NULL,
   ncol = 3,
   legend_point_size = 4,
-  theme_name = "classic"
+  theme_name = "classic",
+  ground_truth_col = NULL,
+  show = c("predicted", "both", "truth"),
+  truth_palette = NULL
 )
 }
 \arguments{
 \item{norm_list}{Named list of SpatialExperiment objects
-containing clustering results.}
+or nested lists of SpatialExperiment objects.}
 
-\item{cluster_col}{Name of the colData column containing
-cluster assignments.}
+\item{cluster_col}{Column containing predicted clusters.}
 
-\item{methods}{Optional character vector specifying the
-normalisation methods to plot.}
+\item{methods}{Optional normalisation methods to plot.}
 
-\item{method_order}{Optional character vector specifying the
-order of normalisation methods.}
+\item{method_order}{Optional method order.}
 
-\item{point_size}{Point size for spatial locations.}
+\item{point_size}{Spatial point size.}
 
-\item{palette}{Optional named character vector specifying
-colours for clusters.}
+\item{palette}{Optional named colours for predicted clusters.}
 
-\item{ncol}{Number of facet columns when only one slice is
-present.}
+\item{ncol}{Number of columns for spatial facets.}
 
-\item{legend_point_size}{Point size used in the legend.}
+\item{legend_point_size}{Point size in legends.}
 
-\item{theme_name}{Plot theme. One of `"classic"`, `"bw"`,
-`"minimal"`, or `"gray"`.}
+\item{theme_name}{Plot theme.}
+
+\item{ground_truth_col}{Ground-truth annotation column.}
+
+\item{show}{One of "both", "predicted", or "truth".}
+
+\item{truth_palette}{Optional named colours for ground truth.}
 }
 \value{
-A list containing plotting data, palette, and plot.
+List containing data, palettes, individual plots,
+  and combined plot.
 }
 \description{
-Plot spatial cluster assignments stored in the colData of
-SpatialExperiment objects across normalisation methods.
+Visualise predicted spatial clusters and ground-truth
+annotations across normalisation methods.
 }
 \details{
-By default, cluster colours are generated using the
-Polychrome 36-colour palette.
+When show = "both", the ground truth is displayed once
+per spatial slice, followed by predicted cluster maps
+across all selected normalisation methods.
+
+Predicted clusters share one colour scale and legend.
+Ground truth uses a separate palette and legend.
 }

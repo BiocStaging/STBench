@@ -11,27 +11,63 @@ plot_svg_topn_gene_set(
   method_order = NULL,
   method_colors = NULL,
   gene_id = "rownames",
-  theme_name = "classic"
+  theme_name = "classic",
+  gene_set_name = "Gene set",
+  title = NULL,
+  subtitle = NULL,
+  alpha = 1,
+  point_size = 2,
+  line_width = 1,
+  line_type = "solid",
+  show_points = TRUE,
+  show_legend = TRUE,
+  percentage = FALSE
 )
 }
 \arguments{
-\item{svg_norm}{Named SVG results.}
+\item{svg_norm}{Named list of SVG results.}
 
-\item{genes}{Gene set, such as housekeeping genes.}
+\item{genes}{Character vector containing genes of interest.}
 
-\item{top_n}{Vector containing top-N values.}
+\item{top_n}{Numeric vector of top-N SVG thresholds.}
 
-\item{method_order}{Optional method order.}
+\item{method_order}{Optional normalisation method order.}
 
-\item{method_colors}{Optional named colours.}
+\item{method_colors}{Optional named vector of method colours.}
 
-\item{gene_id}{Gene identifier.}
+\item{gene_id}{Gene identifier used in SVG results.}
 
 \item{theme_name}{Plot theme.}
+
+\item{gene_set_name}{Name of the gene set.}
+
+\item{title}{Optional plot title.}
+
+\item{subtitle}{Optional plot subtitle.}
+
+\item{alpha}{Transparency of points and lines.}
+
+\item{point_size}{Point size.}
+
+\item{line_width}{Line width.}
+
+\item{line_type}{Line type.}
+
+\item{show_points}{Logical. Display points at each top-N value.}
+
+\item{show_legend}{Logical. Display the method legend.}
+
+\item{percentage}{Logical. Display y-axis as percentages.}
 }
 \value{
 List containing data and plot.
 }
 \description{
-Proportion of a gene set among top-ranked SVGs
+Calculate and visualise the proportion of genes belonging
+to a user-defined gene set among the top-ranked spatially
+variable genes (SVGs) across normalisation methods.
+}
+\details{
+The gene set may contain housekeeping genes, negative-control
+genes, marker genes, or any other user-defined gene set.
 }

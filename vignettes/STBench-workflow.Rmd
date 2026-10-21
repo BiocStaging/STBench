@@ -1,0 +1,649 @@
+---
+title: "Benchmarking normalisation methods with STBench"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Benchmarking normalisation methods with STBench}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Introduction
+
+STBench is an R package for comparing normalisation methods in spatial transcriptomics. This vignette demonstrates quality control, normalisation, spatially variable gene (SVG) analysis, cell-type annotation, spatial clustering, and Gene Ontology (GO) enrichment using a human dorsolateral prefrontal cortex (DLPFC) Visium sample.
+
+The same spatial sample is analysed with multiple normalisation methods. We then compare the biological patterns and downstream results produced by each method.
+
+> **Development note:** This vignette currently uses a DLPFC `SpatialExperiment` object stored on the author's HPC. It is suitable for testing in that environment, but **the data-loading step must be replaced with a publicly accessible example before the vignette can be reproduced by other users or built on a public CI service**. Some analyses (particularly nnSVG, SingleR and BANKSY) may take time.
+
+# 1. Load packages and data
+
+We load STBench and the packages required to retrieve the single-nucleus RNA-seq reference and analyse the human DLPFC spatial sample. The reference is later used for SingleR annotation.
+
+```{r load-data}
+library(STBench)
+library(spatialLIBD)
+library(HDF5Array)
+
+ref_zip <- spatialLIBD::fetch_data(
+  type = "spatialDLPFC_snRNAseq"
+)
+
+ref_dir <- tempfile()
+dir.create(ref_dir)
+unzip(ref_zip, exdir = ref_dir)
+
+ref <- HDF5Array::loadHDF5SummarizedExperiment(
+  file.path(ref_dir, "sce_DLPFC_annotated")
+)
+
+# Local development dataset: replace this path for a public vignette.
+donor1 <- readRDS(
+  "/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/normalized_all/donor1.rds"
+)
+spe <- donor1$None$`151507`
+```
+
+The DLPFC sample contains Visium spots with manual cortical layer annotations, which can be used for UMAP visualisation and spatial clustering evaluation.
+
+```{r inspect-input}
+dim(spe)
+colnames(SummarizedExperiment::colData(ref))
+```
+
+# 2. Quality control
+
+## 2.1 Calculate and visualise QC metrics
+
+We first calculate spot-level metrics, including library size, detected genes and mitochondrial fraction, together with gene-level expression summaries. We inspect their distributions before filtering.
+
+```{r qc-initial, fig.height=7}
+spe <- add_qcs(
+  spe,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc <- plot_qc(
+  spe,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+p_qc$plot
+```
+
+## 2.2 Explore filtering thresholds
+
+First, we examine the relationship between possible cutoffs and the proportions of spots and genes removed, without performing any filtering. Then we display the selected illustrative thresholds: **6.5** for log library size and **0.25** for log mean gene expression.
+
+```{r qc-cutoffs-explore}
+p_cutoffs <- plot_qc_cutoffs(
+  spe,
+  library_cutoff = NULL,
+  gene_cutoff = NULL,
+  n_points = 200,
+  theme_name = "classic"
+)
+p_cutoffs$plot
+```
+
+```{r qc-cutoffs-selected}
+p_cutoffs <- plot_qc_cutoffs(
+  spe,
+  library_cutoff = 7.5,
+  gene_cutoff = 0.4,
+  n_points = 200,
+  theme_name = "classic"
+)
+p_cutoffs$plot
+```
+
+## 2.3 Apply filtering and reassess QC
+
+We remove spots and genes below the selected thresholds. The QC metrics are recalculated for the retained observations.
+
+```{r qc-filter, fig.height=7}
+spe_filtered <- filter_qc(
+  spe,
+  library_cutoff = 7.5,
+  gene_cutoff = 0.7,
+  recalculate = TRUE,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc_filtered <- plot_qc(
+  spe_filtered,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+p_qc_filtered$plot
+```
+
+# 3. Apply normalisation methods
+
+We apply five normalisation approaches to the same filtered sample. The `None` method provides a log1p-transformed baseline. Method-specific arguments are supplied through `params`.
+
+```{r normalisation}
+norm <- normalize_spe(
+  spe_filtered,
+  methods = c(
+    "None",
+    "scran",
+    "sctransform",
+    "SpaNorm",
+    "Giotto"
+  ),
+  params = list(
+    sctransform = list(
+      seed = 123,
+      vst_flavor = "v2",
+      verbosity = 1
+    ),
+    spanorm = list(
+      sample_p = 0.3,
+      df_tps = 6,
+      adj_method = "logpac",
+      seed = 123
+    )
+  )
+)
+
+# Check the dimensions returned by each normalisation method.
+sapply(norm, dim)
+```
+
+# 4. Compare normalised library sizes
+
+We compare summed normalised expression across spots using the methods supported by this diagnostic. By default, the function excludes sctransform and Giotto because their transformed assays are not interpreted as standard log1p-normalised values.
+
+```{r library-size, fig.height=7}
+p_ls <- plot_library_size_comparison(
+  norm,
+  methods = NULL,
+  assay_name = "logcounts",
+  point_size = 0.5,
+  theme_name = "classic"
+)
+p_ls$plot
+```
+
+# 5. UMAP visualisation
+
+We run PCA and UMAP independently for each normalisation method and use the resulting coordinates to inspect the distribution of manually annotated cortical layers. All available spot annotations are retained for plotting.
+
+```{r umap-calculate}
+umap_data <- get_umap_data(
+  norm,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
+)
+```
+
+```{r umap-layers, fig.height=6}
+p_umap_layer <- plot_umap_comparison(
+  umap_data,
+  colour_by = "layer_guess",
+  point_size = 0.58,
+  alpha = 0.6,
+  ncol = 3,
+  theme_name = "classic"
+)
+p_umap_layer$plot
+```
+
+# 6. Spatially variable gene analysis
+
+## 6.1 Detect SVGs using nnSVG
+
+We use the same SVG detection procedure for each normalised dataset to examine how normalisation affects spatial variability statistics and gene rankings.
+
+```{r svg-detection}
+svg_norm <- run_svg(
+  norm_list = norm,
+  method = "nnSVG",
+  n_threads = 1,
+  verbose = FALSE
+)
+
+names(svg_norm)
+head(as.data.frame(SummarizedExperiment::rowData(svg_norm$scran)))
+```
+
+## 6.2 Evaluate biological marker genes
+
+For DLPFC we use **human brain-related gene symbols** instead of the mouse-heart markers in the original testing script. These include markers associated with cortical layers, neurons, oligodendrocytes and astrocytes. Check that your dataset row names contain gene symbols; if they contain Ensembl IDs, identifiers must be reconciled before these plots can be interpreted.
+
+```{r svg-marker-genes}
+marker_genes <- c(
+  "MBP", "MOBP", "MAG", "PLP1", "PCP4",
+  "GFAP", "AQP4", "SLC17A7", "SNAP25",
+  "GAD1", "GAD2", "OLIG1", "OLIG2"
+)
+
+# Verify that the selected symbols occur in this dataset.
+intersect(marker_genes, rownames(svg_norm$scran))
+```
+
+We compare their SVG likelihood-ratio statistics and their rankings across normalisation methods. Smaller SVG ranks indicate a higher relative priority.
+
+```{r svg-marker-stat, fig.height=6}
+p_svg_markers <- plot_svg_stat(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  transform = "log",
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "bw"
+)
+p_svg_markers$plot
+```
+
+```{r svg-marker-rank, fig.height=6}
+p_svg_rank <- plot_svg_rank(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  method_order = NULL,
+  method_colors = NULL,
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "bw"
+)
+p_svg_rank$plot
+```
+
+## 6.3 Examine housekeeping genes
+
+We compare housekeeping-gene SVG statistics as an exploratory diagnostic. These genes are not guaranteed to be spatially uniform; their behaviour should be interpreted in the context of the tissue.
+
+```{r svg-housekeeping-genes}
+housekeeping_genes <- c(
+  "GAPDH", "ACTB", "HPRT1", "B2M", "PPIA",
+  "RPL13A", "RPLP0", "TBP", "GUSB"
+)
+```
+
+```{r svg-housekeeping-distribution, fig.height=5}
+p_svg_hk <- plot_svg_gene_set_distribution(
+  svg_norm = svg_norm,
+  genes = housekeeping_genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = "log",
+  plot_type = "boxplot",
+  add_jitter = TRUE,
+  point_size = 1.5,
+  alpha = 1,
+  theme_name = "classic"
+)
+p_svg_hk$plot
+```
+
+We also calculate the proportion of selected housekeeping genes among the top 50, 100, 200 and 300 ranked SVGs.
+
+```{r svg-housekeeping-topn, fig.height=5}
+p_svg_topn <- plot_svg_topn_gene_set(
+  svg_norm = svg_norm,
+  genes = housekeeping_genes,
+  top_n = c(50, 100, 200, 300),
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  theme_name = "classic"
+)
+p_svg_topn$plot
+```
+
+## 6.4 Compare gene sets
+
+We compare the distribution of SVG statistics for biological markers and housekeeping genes. The transformed statistics are displayed separately for each gene set.
+
+```{r svg-gene-sets, fig.height=6}
+gene_sets <- list(
+  "Housekeeping genes" = housekeeping_genes,
+  "Biological markers" = marker_genes
+)
+
+p_svg_sets <- plot_svg_gene_sets(
+  svg_norm = svg_norm,
+  gene_sets = gene_sets,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = "log",
+  plot_type = "boxplot",
+  scales = "free_y",
+  facet_ncol = 3,
+  add_jitter = TRUE,
+  point_size = 1,
+  alpha = 0.65,
+  jitter_alpha = 0.5,
+  box_width = 0.65,
+  title = "Spatial variability across gene sets",
+  subtitle = NULL,
+  x_label = "Normalisation method",
+  y_label = "Log likelihood-ratio statistic",
+  show_legend = FALSE,
+  theme_name = "classic"
+)
+p_svg_sets$plot
+```
+
+# 7. Spatial expression of marker genes
+
+We visualise selected DLPFC markers across normalisation methods. In the scaled plot, expression is rescaled to the interval from 0 to 1 for each gene across the selected methods. We can also plot the unscaled assay values; their numerical scales may not be directly comparable for methods that return different kinds of transformed expression.
+
+```{r spatial-expression-scaled, fig.height=8}
+spatial_markers <- c(
+  "MBP", "MOBP", "PCP4", "GFAP", "SLC17A7", "GAD1"
+)
+
+p_marker_maps <- plot_spatial_expression(
+  norm_list = norm,
+  genes = c("MBP", "MOBP", "PCP4", "GFAP"),
+  methods = c("None", "scran", "SpaNorm"),
+  assay_name = "logcounts",
+  method_order = NULL,
+  scale_expr = TRUE,
+  scale_by = "gene",
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic"
+)
+p_marker_maps$plot
+```
+
+```{r spatial-expression-unscaled, fig.height=8}
+p_spatial_unscaled <- plot_spatial_expression(
+  norm_list = norm,
+  genes = spatial_markers,
+  assay_name = "logcounts",
+  method_order = NULL,
+  scale_expr = FALSE,
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic"
+)
+p_spatial_unscaled$plot
+```
+
+# 8. Cell-type annotation with SingleR
+
+We annotate each normalised spatial dataset using the same DLPFC single-nucleus RNA-seq reference. The reference cell-type labels are read from `cellType_broad_hc`, as in the current testing script. This code retains the original `de.method = "classic"` setting.
+
+```{r singler-annotation}
+annotated_norm <- run_annotation(
+  norm_list = norm,
+  ref = ref,
+  labels = as.character(ref$cellType_broad_hc),
+  method = "SingleR",
+  label_name = "SingleR_label",
+  pruned_label_name = "SingleR_pruned_label",
+  de.method = "classic",
+  BPPARAM = BiocParallel::SnowParam(
+    workers = 1,
+    progressbar = TRUE
+  )
+)
+
+names(annotated_norm)
+head(SummarizedExperiment::colData(annotated_norm$scran))
+table(annotated_norm$scran$SingleR_label)
+```
+
+Before comparing annotations, we confirm that the spatial spot identifiers appear in the same order across all normalisation methods.
+
+```{r singler-spot-check}
+stopifnot(
+  all(vapply(
+    annotated_norm,
+    function(spe) {
+      identical(
+        colnames(spe),
+        colnames(annotated_norm[[1]])
+      )
+    },
+    logical(1)
+  ))
+)
+```
+
+## 8.1 Visualise spatial cell-type assignments
+
+We compare the spatial distributions of predicted cell types and the pruned SingleR labels. Pruned labels can include missing assignments where confidence was insufficient.
+
+```{r singler-maps, fig.height=7}
+p_annotation <- plot_spatial_annotation(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  ncol = 3,
+  theme_name = "classic"
+)
+p_annotation$plot
+```
+
+```{r singler-pruned-maps, fig.height=7}
+p_annotation_pruned <- plot_spatial_annotation(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_pruned_label",
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  ncol = 3,
+  theme_name = "classic"
+)
+p_annotation_pruned$plot
+```
+
+## 8.2 Compare predicted cell-type composition
+
+We examine relative proportions and absolute spot counts assigned to each predicted cell type.
+
+```{r singler-proportions, fig.height=6}
+p_celltype_prop <- plot_celltype_proportion(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  palette = NULL,
+  show = "proportion",
+  theme_name = "classic"
+)
+p_celltype_prop$plot
+```
+
+```{r singler-counts, fig.height=6}
+p_celltype_count <- plot_celltype_proportion(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  palette = NULL,
+  show = "count",
+  theme_name = "classic"
+)
+p_celltype_count$plot
+```
+
+## 8.3 Calculate and plot annotation agreement
+
+Pairwise agreement measures the fraction of spatial spots receiving the same predicted cell-type label under two normalisation methods. This is a measure of consistency between methods, rather than accuracy against a known spot-level cell-type ground truth.
+
+```{r singler-agreement, fig.height=6}
+annotation_agreement <- calculate_annotation_agreement(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE
+)
+annotation_agreement
+
+p_agreement <- plot_annotation_agreement(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE,
+  show_values = TRUE,
+  digits = 2,
+  colour_option = "viridis",
+  theme_name = "classic"
+)
+p_agreement$plot
+```
+
+# 9. BANKSY spatial clustering
+
+We use BANKSY with the same parameter settings for each normalised dataset. Spatial neighbourhood information is incorporated alongside gene expression to identify spatial domains.
+
+```{r banksy-clustering}
+banksy_norm <- run_banksy_individual(
+  norm_list = norm,
+  methods = names(norm),
+  assay_name = "logcounts",
+  cluster_col = "banksy_cluster",
+  k_geom = 15,
+  lambda = 0.8,
+  resolution = 0.2,
+  seed = 123
+)
+
+names(banksy_norm)
+head(SummarizedExperiment::colData(banksy_norm$scran))
+table(banksy_norm$scran$banksy_cluster)
+```
+
+## 9.1 Compare predicted domains with cortical layers
+
+We show the manual cortical layer annotation once and the predicted BANKSY clusters for each normalisation method. Cluster numbers are method-specific labels, so the same number across methods does not necessarily indicate the same biological domain.
+
+```{r banksy-maps, fig.height=10}
+p_banksy <- plot_spatial_clustering(
+  norm_list = banksy_norm,
+  cluster_col = "banksy_cluster",
+  ground_truth_col = "layer_guess",
+  show = "both",
+  methods = names(banksy_norm),
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  truth_palette = NULL,
+  ncol = 5,
+  legend_point_size = 4,
+  theme_name = "classic"
+)
+p_banksy$plot
+```
+
+The individual panels are also available as `p_banksy$plots$truth` and `p_banksy$plots$predicted` without rerunning clustering.
+
+## 9.2 Evaluate clustering with ARI
+
+The adjusted Rand index (ARI) measures agreement between BANKSY clusters and the manual cortical layer annotations. A score of 1 indicates perfect agreement; the index adjusts for chance agreement.
+
+```{r banksy-ari}
+ari_df <- calculate_ari(
+  norm_list = banksy_norm,
+  ground_truth_col = "layer_guess",
+  cluster_col = "banksy_cluster",
+  methods = names(banksy_norm)
+)
+ari_df
+```
+
+```{r banksy-ari-plot}
+p_ari <- plot_ari(
+  ari_df = ari_df,
+  method_col = "method",
+  ari_col = "ARI",
+  method_order = NULL,
+  point_size = 4,
+  palette = NULL,
+  theme_name = "classic"
+)
+p_ari$plot
+```
+
+# 10. Differential expression and GO enrichment
+
+We identify genes associated with each BANKSY cluster and perform GO Biological Process enrichment using the human annotation database `org.Hs.eg.db`. The cluster-specific differential-expression analysis uses the same settings as the existing `calculate_go()` workflow, including an FDR cutoff of 0.05. GO enrichment is an exploratory interpretation of the identified clusters.
+
+```{r go-analysis}
+go_result <- calculate_go(
+  norm_list = banksy_norm,
+  cluster_col = "banksy_cluster",
+  methods = names(banksy_norm),
+  assay_name = "logcounts",
+  OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.7,
+  min_spots = 30,
+  min_genes = 10,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  readable = TRUE
+)
+
+names(go_result)
+head(go_result$genes)
+head(go_result$go)
+names(go_result$markers)
+names(go_result$universe)
+```
+
+## 10.1 Visualise enriched biological processes
+
+For each cluster and normalisation method, we visualise the five most significant GO terms. The title and subtitle identify the dataset and the comparison. The `top_n` argument controls the displayed terms; the original enrichment results remain available in `go_result`.
+
+```{r go-plot, fig.height=9}
+p_go <- plot_go(
+  go_result = go_result,
+  top_n = 5,
+  method_col = "method",
+  cluster_col = "cluster",
+  method_order = NULL,
+  point_size_range = c(2, 7),
+  theme_name = "classic",
+  methods = NULL,
+  title = "GO enrichment in DLPFC spatial domains",
+  subtitle = "Comparison across normalisation methods",
+  ncol = 3
+)
+p_go$plot
+```
+
+# Summary
+
+This vignette demonstrates how STBench can apply and benchmark several normalisation methods using consistent downstream analyses. The visual comparisons examine QC, normalised library sizes, UMAP, spatial variability, cell-type annotations, spatial clustering and functional enrichment.
+
+The example is currently intended for **local development and testing**. For a distributable package vignette, the data-loading section should use accessible example data, and computationally expensive steps may need a precomputed demonstration dataset or build-time caching strategy. Before interpreting results, confirm that gene identifiers match the selected human marker genes and `org.Hs.eg.db` identifier type.

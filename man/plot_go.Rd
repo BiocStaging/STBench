@@ -11,39 +11,47 @@ plot_go(
   cluster_col = "cluster",
   method_order = NULL,
   point_size_range = c(2, 7),
-  theme_name = "classic"
+  theme_name = "classic",
+  methods = NULL,
+  title = NULL,
+  subtitle = NULL,
+  ncol = 3
 )
 }
 \arguments{
-\item{go_result}{Result returned by `calculate_go()`, or the
-GO data frame contained in `go_result$go`.}
+\item{go_result}{Output from calculate_go() or GO data frame.}
 
-\item{top_n}{Number of top GO terms shown per normalisation
-method and cluster.}
+\item{top_n}{Number of top GO terms per method and cluster.
+If NULL, all available GO terms are displayed.}
 
-\item{method_col}{Name of the column containing normalisation
-methods.}
+\item{method_col}{Column containing normalisation methods.}
 
-\item{cluster_col}{Name of the column containing clusters.}
+\item{cluster_col}{Column containing cluster assignments.}
 
-\item{method_order}{Optional character vector specifying the
-order of normalisation methods.}
+\item{method_order}{Optional normalisation method order.}
 
-\item{point_size_range}{Numeric vector defining minimum and
-maximum point size.}
+\item{point_size_range}{Minimum and maximum point sizes.}
 
-\item{theme_name}{Plot theme. One of `"classic"`, `"bw"`,
-`"minimal"`, or `"gray"`.}
+\item{theme_name}{Plot theme.}
+
+\item{methods}{Optional methods to display.}
+
+\item{title}{Optional plot title.}
+
+\item{subtitle}{Optional plot subtitle.}
+
+\item{ncol}{Number of facet columns.}
 }
 \value{
-A list containing plotting data and plot.
+A list containing plotting data, full GO data,
+  and the plot.
 }
 \description{
-Plot the top enriched Gene Ontology terms for each cluster
-across normalisation methods.
+Plot enriched Gene Ontology terms across normalisation
+methods and spatial clusters.
 }
 \details{
 Point size represents gene count, colour represents
-enrichment significance, and shape represents normalisation
-method.
+enrichment significance, and shape represents the
+normalisation method.
 }

@@ -20,6 +20,7 @@ RoxygenNote: 7.3.3
 Imports:
     ggplot2,
     dplyr,
+    magrittr,
     SummarizedExperiment,
     SingleCellExperiment,
     SpatialExperiment,
@@ -35,14 +36,16 @@ Imports:
     scales,
     methods,
     rlang,
-    MatrixGenerics,
-    tibble,
+    MatrixGenerics
 Suggests:
+    tibble,
     nnSVG,
     SpaNorm,
     Giotto,
     Banksy,
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat,
+    CellChat
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr

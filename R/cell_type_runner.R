@@ -70,9 +70,12 @@ run_annotation <- function(
   # ----------------------------------------------------------
 
   out <- lapply(
-    norm_list,
-    function(spe) {
+    names(norm_list),
+    function(method_name) {
 
+      message("Running SingleR: ", method_name)
+
+      spe <- norm_list[[method_name]]
       # ------------------------------------------------------
       # Run SingleR
       # ------------------------------------------------------

@@ -33,11 +33,11 @@ normalize_spe <- function(
 ) {
 
   norm_functions <- list(
-    none = norm_none,
+    None = norm_none,
     scran = norm_scran,
-    sct = norm_sct,
-    spanorm = norm_spanorm,
-    giotto = norm_giotto
+    sctransform = norm_sct,
+    SpaNorm = norm_spanorm,
+    Giotto = norm_giotto
   )
 
   unknown_methods <- setdiff(

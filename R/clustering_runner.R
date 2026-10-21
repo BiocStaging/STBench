@@ -256,7 +256,7 @@ run_banksy_individual <- function(
       }
 
 
-      cluster_name <- tail(
+      cluster_name <- utils::tail(
         cluster_name,
         1
       )
@@ -768,6 +768,8 @@ plot_ari <- function(
 
 
 
+
+
 # ============================================================
 # Spatial clustering plot
 # ============================================================
@@ -775,30 +777,32 @@ plot_ari <- function(
 
 #' Plot spatial clustering results
 #'
-#' Plot spatial cluster assignments stored in the colData of
-#' SpatialExperiment objects across normalisation methods.
+#' Visualise predicted spatial clusters and ground-truth
+#' annotations across normalisation methods.
 #'
-#' By default, cluster colours are generated using the
-#' Polychrome 36-colour palette.
+#' When show = "both", the ground truth is displayed once
+#' per spatial slice, followed by predicted cluster maps
+#' across all selected normalisation methods.
+#'
+#' Predicted clusters share one colour scale and legend.
+#' Ground truth uses a separate palette and legend.
 #'
 #' @param norm_list Named list of SpatialExperiment objects
-#'   containing clustering results.
-#' @param cluster_col Name of the colData column containing
-#'   cluster assignments.
-#' @param methods Optional character vector specifying the
-#'   normalisation methods to plot.
-#' @param method_order Optional character vector specifying the
-#'   order of normalisation methods.
-#' @param point_size Point size for spatial locations.
-#' @param palette Optional named character vector specifying
-#'   colours for clusters.
-#' @param ncol Number of facet columns when only one slice is
-#'   present.
-#' @param legend_point_size Point size used in the legend.
-#' @param theme_name Plot theme. One of `"classic"`, `"bw"`,
-#'   `"minimal"`, or `"gray"`.
+#'   or nested lists of SpatialExperiment objects.
+#' @param cluster_col Column containing predicted clusters.
+#' @param methods Optional normalisation methods to plot.
+#' @param method_order Optional method order.
+#' @param ground_truth_col Ground-truth annotation column.
+#' @param show One of "both", "predicted", or "truth".
+#' @param point_size Spatial point size.
+#' @param palette Optional named colours for predicted clusters.
+#' @param truth_palette Optional named colours for ground truth.
+#' @param ncol Number of columns for spatial facets.
+#' @param legend_point_size Point size in legends.
+#' @param theme_name Plot theme.
 #'
-#' @return A list containing plotting data, palette, and plot.
+#' @return List containing data, palettes, individual plots,
+#'   and combined plot.
 #'
 #' @export
 plot_spatial_clustering <- function(
@@ -810,55 +814,66 @@ plot_spatial_clustering <- function(
     palette = NULL,
     ncol = 3,
     legend_point_size = 4,
-    theme_name = "classic"
+    theme_name = "classic",
+    ground_truth_col = NULL,
+    show = c("predicted", "both", "truth"),
+    truth_palette = NULL
 ) {
 
   # ----------------------------------------------------------
   # Check input
   # ----------------------------------------------------------
 
-  .check_named_list(
-    norm_list
-  )
+  .check_named_list(norm_list)
+
+  show <- match.arg(show)
+
+  if (
+    show %in% c("both", "truth") &&
+    is.null(ground_truth_col)
+  ) {
+    stop(
+      "ground_truth_col must be supplied when ",
+      "show = 'both' or 'truth'."
+    )
+  }
 
 
   # ----------------------------------------------------------
   # Resolve methods
   # ----------------------------------------------------------
 
-  available_methods <- intersect(
+  missing_methods <- setdiff(
     methods,
     names(norm_list)
   )
 
-
-  if (is.null(method_order)) {
-
-    methods <- available_methods
-
-  } else {
-
-    methods <- method_order[
-      method_order %in%
-        available_methods
-    ]
-  }
-
-
-  if (length(methods) == 0) {
-
+  if (length(missing_methods) > 0) {
     stop(
-      "No valid normalisation methods were found."
+      "Unknown normalisation methods: ",
+      paste(missing_methods, collapse = ", ")
     )
   }
 
+  methods <- unique(methods)
+
+  if (!is.null(method_order)) {
+    methods <- c(
+      intersect(method_order, methods),
+      setdiff(methods, method_order)
+    )
+  }
+
+  if (length(methods) == 0) {
+    stop("No normalisation methods selected.")
+  }
+
 
   # ----------------------------------------------------------
-  # Extract plotting data
+  # Extract spatial annotations
   # ----------------------------------------------------------
 
   df_list <- list()
-
 
   for (method in methods) {
 
@@ -866,7 +881,7 @@ plot_spatial_clustering <- function(
 
 
     # --------------------------------------------------------
-    # Single SPE
+    # Single SPE or multiple slices
     # --------------------------------------------------------
 
     if (
@@ -880,84 +895,101 @@ plot_spatial_clustering <- function(
         slice1 = method_data
       )
 
-
-      # --------------------------------------------------------
-      # Multiple slices
-      # --------------------------------------------------------
-
     } else if (is.list(method_data)) {
 
       spe_list <- method_data
 
+      if (
+        is.null(names(spe_list)) ||
+        anyNA(names(spe_list)) ||
+        any(!nzchar(names(spe_list)))
+      ) {
+        stop(
+          "Slice lists must be named for method: ",
+          method
+        )
+      }
 
     } else {
 
       stop(
-        "Each method must contain either a SpatialExperiment ",
-        "or a list of SpatialExperiment objects."
+        "Invalid input for method: ",
+        method
       )
     }
 
 
     # --------------------------------------------------------
-    # Process slices
+    # Process each slice
     # --------------------------------------------------------
 
     for (slice_name in names(spe_list)) {
 
       spe <- spe_list[[slice_name]]
 
+      if (
+        !methods::is(
+          spe,
+          "SpatialExperiment"
+        )
+      ) {
+        stop(
+          "Invalid SpatialExperiment for: ",
+          method,
+          " / ",
+          slice_name
+        )
+      }
 
-      cd <- SummarizedExperiment::colData(
-        spe
-      )
+      cd <- SummarizedExperiment::colData(spe)
 
 
       # ------------------------------------------------------
-      # Check cluster column
+      # Check required columns
       # ------------------------------------------------------
 
       if (
-        !cluster_col %in%
-        colnames(cd)
+        show %in% c("both", "predicted") &&
+        !cluster_col %in% colnames(cd)
       ) {
-
         stop(
           "Cluster column '",
           cluster_col,
-          "' not found for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "'."
+          "' not found for: ",
+          method
+        )
+      }
+
+      if (
+        show %in% c("both", "truth") &&
+        !ground_truth_col %in% colnames(cd)
+      ) {
+        stop(
+          "Ground-truth column '",
+          ground_truth_col,
+          "' not found for: ",
+          method
         )
       }
 
 
       # ------------------------------------------------------
-      # Coordinates
+      # Spatial coordinates
       # ------------------------------------------------------
 
       coords <- as.data.frame(
-        SpatialExperiment::spatialCoords(
-          spe
-        )
+        SpatialExperiment::spatialCoords(spe)
       )
 
-
-      if (ncol(coords) < 2) {
-
+      if (
+        ncol(coords) < 2 ||
+        nrow(coords) != ncol(spe)
+      ) {
         stop(
-          "spatialCoords(spe) must contain at least two columns."
-        )
-      }
-
-
-      if (nrow(coords) != ncol(spe)) {
-
-        stop(
-          "Number of spatial coordinates does not match ",
-          "the number of spatial locations."
+          "Invalid spatial coordinates for: ",
+          method,
+          " / ",
+          slice_name
         )
       }
 
@@ -966,278 +998,343 @@ plot_spatial_clustering <- function(
       # Construct plotting data
       # ------------------------------------------------------
 
-      temp <- data.frame(
+      predicted <- if (
+        cluster_col %in% colnames(cd)
+      ) {
+        as.character(cd[[cluster_col]])
+      } else {
+        rep(NA_character_, ncol(spe))
+      }
 
-        x = coords[, 1],
-
-        y = coords[, 2],
-
-        cluster = as.character(
-          cd[[cluster_col]]
-        ),
-
-        method = method,
-
-        slice = slice_name,
-
-        stringsAsFactors = FALSE
-      )
-
+      truth <- if (
+        !is.null(ground_truth_col) &&
+        ground_truth_col %in% colnames(cd)
+      ) {
+        as.character(cd[[ground_truth_col]])
+      } else {
+        rep(NA_character_, ncol(spe))
+      }
 
       df_list[[
-        paste(
-          method,
-          slice_name,
-          sep = "_"
-        )
-      ]] <- temp
+        paste(method, slice_name, sep = "_")
+      ]] <- data.frame(
+        x = coords[, 1],
+        y = coords[, 2],
+        method = method,
+        slice = slice_name,
+        predicted = predicted,
+        truth = truth,
+        stringsAsFactors = FALSE
+      )
     }
   }
 
 
   # ----------------------------------------------------------
-  # Check extracted data
+  # Combine data
   # ----------------------------------------------------------
 
-  if (length(df_list) == 0) {
-
-    stop(
-      "No clustering data could be extracted."
-    )
-  }
-
-
-  # ----------------------------------------------------------
-  # Combine
-  # ----------------------------------------------------------
-
-  df <- do.call(
-    rbind,
-    df_list
-  )
-
-
-  rownames(df) <- NULL
-
-
-  # ----------------------------------------------------------
-  # Factor ordering
-  # ----------------------------------------------------------
+  df <- dplyr::bind_rows(df_list)
 
   df$method <- factor(
     df$method,
     levels = methods
   )
 
-
   df$slice <- factor(
     df$slice,
-    levels = unique(
-      df$slice
-    )
-  )
-
-
-  df$cluster <- factor(
-    df$cluster
+    levels = unique(df$slice)
   )
 
 
   # ----------------------------------------------------------
-  # Resolve cluster colours
+  # Resolve colour palettes
   # ----------------------------------------------------------
 
-  cluster_levels <- levels(
-    df$cluster
-  )
+  make_palette <- function(values, supplied) {
 
-
-  n_clusters <- length(
-    cluster_levels
-  )
-
-
-  if (is.null(palette)) {
-
-    if (n_clusters > 36) {
-
-      stop(
-        "More than 36 clusters were detected. ",
-        "Please provide a custom colour palette."
+    levels_use <- sort(
+      unique(
+        values[
+          !is.na(values) & nzchar(values)
+        ]
       )
+    )
+
+    n_levels <- length(levels_use)
+
+    if (n_levels == 0) {
+      return(character(0))
     }
 
+    if (is.null(supplied)) {
 
-    palette <- Polychrome::palette36.colors(
-      n_clusters
-    )
-
-
-    names(palette) <- cluster_levels
-
-
-  } else {
-
-    # --------------------------------------------------------
-    # Check user palette
-    # --------------------------------------------------------
-
-    if (is.null(names(palette))) {
-
-      if (length(palette) < n_clusters) {
-
+      if (n_levels > 36) {
         stop(
-          "The supplied palette contains fewer colours ",
-          "than the number of clusters."
+          "More than 36 categories detected. ",
+          "Please supply a custom palette."
         )
       }
 
+      supplied <- Polychrome::palette36.colors(
+        n_levels
+      )
 
-      palette <- palette[
-        seq_len(
-          n_clusters
-        )
-      ]
+      names(supplied) <- levels_use
 
+    } else if (is.null(names(supplied))) {
 
-      names(palette) <- cluster_levels
+      if (length(supplied) < n_levels) {
+        stop("Not enough colours supplied.")
+      }
 
+      supplied <- supplied[seq_len(n_levels)]
+
+      names(supplied) <- levels_use
 
     } else {
 
-      missing_colours <- setdiff(
-        cluster_levels,
-        names(palette)
+      missing <- setdiff(
+        levels_use,
+        names(supplied)
       )
 
-
-      if (length(missing_colours) > 0) {
-
+      if (length(missing) > 0) {
         stop(
-          "The supplied palette does not contain colours for: ",
-          paste(
-            missing_colours,
-            collapse = ", "
-          )
+          "Missing palette colours for: ",
+          paste(missing, collapse = ", ")
         )
       }
 
-
-      palette <- palette[
-        cluster_levels
-      ]
+      supplied <- supplied[levels_use]
     }
+
+    supplied
   }
 
 
   # ----------------------------------------------------------
-  # Base plot
+  # Predicted cluster colours
   # ----------------------------------------------------------
 
-  p <- ggplot2::ggplot(
-    df,
-    ggplot2::aes(
-      x = .data$x,
-      y = .data$y,
-      colour = .data$cluster
-    )
-  ) +
+  if (show %in% c("both", "predicted")) {
 
-    ggplot2::geom_point(
-      size = point_size
+    palette <- make_palette(
+      df$predicted,
+      palette
     )
 
+  }
+
 
   # ----------------------------------------------------------
-  # Faceting
+  # Ground-truth colours
   # ----------------------------------------------------------
 
-  if (
-    length(
-      unique(
-        df$slice
-      )
-    ) > 1
+  if (show %in% c("both", "truth")) {
+
+    truth_palette <- make_palette(
+      df$truth,
+      truth_palette
+    )
+
+  }
+
+
+  # ----------------------------------------------------------
+  # Common spatial plotting helper
+  # ----------------------------------------------------------
+
+  make_spatial_plot <- function(
+    data,
+    annotation_col,
+    colours,
+    legend_title
   ) {
 
-    p <- p +
+    data$annotation <- factor(
+      data[[annotation_col]],
+      levels = names(colours)
+    )
 
-      ggplot2::facet_grid(
-        method ~ slice
+    ggplot2::ggplot(
+      data,
+      ggplot2::aes(
+        x = .data$x,
+        y = .data$y,
+        colour = .data$annotation
       )
-
-  } else {
-
-    p <- p +
-
-      ggplot2::facet_wrap(
-        ~ method,
-        ncol = ncol
-      )
-  }
-
-
-  # ----------------------------------------------------------
-  # Final plot
-  # ----------------------------------------------------------
-
-  p <- p +
-
-    ggplot2::coord_fixed() +
-
-    ggplot2::scale_colour_manual(
-      values = palette,
-      drop = FALSE
     ) +
-
-    ggplot2::labs(
-      x = "x",
-      y = "y",
-      colour = "Cluster"
-    ) +
-
-    .get_plot_theme(
-      theme_name
-    ) +
-
-    ggplot2::theme(
-
-      panel.grid =
-        ggplot2::element_blank(),
-
-      strip.background =
-        ggplot2::element_blank(),
-
-      strip.text =
-        ggplot2::element_text(
-          size = 9
+      ggplot2::geom_point(
+        size = point_size
+      ) +
+      ggplot2::coord_fixed() +
+      ggplot2::scale_colour_manual(
+        values = colours,
+        na.value = "grey85",
+        drop = FALSE
+      ) +
+      ggplot2::labs(
+        x = "x",
+        y = "y",
+        colour = legend_title
+      ) +
+      .get_plot_theme(theme_name) +
+      ggplot2::theme(
+        panel.grid = ggplot2::element_blank(),
+        strip.background = ggplot2::element_blank(),
+        strip.text = ggplot2::element_text(
+          size = 9,
+          face = "bold"
         ),
-
-      axis.text =
-        ggplot2::element_text(
+        axis.text = ggplot2::element_text(
           size = 8
         ),
-
-      legend.position = "right"
-    ) +
-
-    ggplot2::guides(
-      colour =
-        ggplot2::guide_legend(
+        legend.position = "right"
+      ) +
+      ggplot2::guides(
+        colour = ggplot2::guide_legend(
           override.aes = list(
             size = legend_point_size
           )
         )
+      )
+  }
+
+
+  # ----------------------------------------------------------
+  # Ground truth: one plot per slice
+  # ----------------------------------------------------------
+
+  p_truth <- NULL
+
+  if (show %in% c("both", "truth")) {
+
+    # Use the first selected method as the reference
+    # for each slice. Ground truth is not repeated
+    # across normalisation methods.
+
+    truth_df <- df[
+      as.character(df$method) == methods[1],
+      ,
+      drop = FALSE
+    ]
+
+    if (nrow(truth_df) == 0) {
+      stop("Ground-truth data could not be extracted.")
+    }
+
+    p_truth <- make_spatial_plot(
+      data = truth_df,
+      annotation_col = "truth",
+      colours = truth_palette,
+      legend_title = "Ground truth"
     )
+
+    if (length(unique(truth_df$slice)) > 1) {
+
+      p_truth <- p_truth +
+        ggplot2::facet_wrap(
+          ~ slice,
+          ncol = ncol
+        )
+    }
+
+    p_truth <- p_truth +
+      ggplot2::labs(
+        title = "Ground truth"
+      ) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "bold"
+        )
+      )
+  }
+
+
+  # ----------------------------------------------------------
+  # Predicted clusters: all selected methods
+  # ----------------------------------------------------------
+
+  p_predicted <- NULL
+
+  if (show %in% c("both", "predicted")) {
+
+    p_predicted <- make_spatial_plot(
+      data = df,
+      annotation_col = "predicted",
+      colours = palette,
+      legend_title = "BANKSY cluster"
+    )
+
+    if (length(unique(df$slice)) > 1) {
+
+      p_predicted <- p_predicted +
+        ggplot2::facet_grid(
+          method ~ slice
+        )
+
+    } else {
+
+      p_predicted <- p_predicted +
+        ggplot2::facet_wrap(
+          ~ method,
+          ncol = ncol
+        )
+    }
+
+    p_predicted <- p_predicted +
+      ggplot2::labs(
+        title = "BANKSY clustering"
+      ) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "bold"
+        )
+      )
+  }
+
+
+  # ----------------------------------------------------------
+  # Combine ground truth and predicted clusters
+  # ----------------------------------------------------------
+
+  if (show == "both") {
+
+    combined_plot <- patchwork::wrap_plots(
+      p_truth,
+      p_predicted,
+      ncol = 1,
+      heights = c(1, 2)
+    )
+
+  } else if (show == "truth") {
+
+    combined_plot <- p_truth
+
+  } else {
+
+    combined_plot <- p_predicted
+
+  }
 
 
   # ----------------------------------------------------------
   # Return
   # ----------------------------------------------------------
 
-  list(
-    data = df,
-    palette = palette,
-    plot = p
+  return(
+    list(
+      data = df,
+      palette = palette,
+      truth_palette = truth_palette,
+      plots = list(
+        truth = p_truth,
+        predicted = p_predicted
+      ),
+      plot = combined_plot
+    )
   )
 }

@@ -554,6 +554,7 @@ calculate_go <- function(
 
 
 
+
 # ============================================================
 # Plot GO enrichment
 # ============================================================
@@ -561,28 +562,28 @@ calculate_go <- function(
 
 #' Plot GO enrichment results
 #'
-#' Plot the top enriched Gene Ontology terms for each cluster
-#' across normalisation methods.
+#' Plot enriched Gene Ontology terms across normalisation
+#' methods and spatial clusters.
 #'
 #' Point size represents gene count, colour represents
-#' enrichment significance, and shape represents normalisation
-#' method.
+#' enrichment significance, and shape represents the
+#' normalisation method.
 #'
-#' @param go_result Result returned by `calculate_go()`, or the
-#'   GO data frame contained in `go_result$go`.
-#' @param top_n Number of top GO terms shown per normalisation
-#'   method and cluster.
-#' @param method_col Name of the column containing normalisation
-#'   methods.
-#' @param cluster_col Name of the column containing clusters.
-#' @param method_order Optional character vector specifying the
-#'   order of normalisation methods.
-#' @param point_size_range Numeric vector defining minimum and
-#'   maximum point size.
-#' @param theme_name Plot theme. One of `"classic"`, `"bw"`,
-#'   `"minimal"`, or `"gray"`.
+#' @param go_result Output from calculate_go() or GO data frame.
+#' @param top_n Number of top GO terms per method and cluster.
+#'   If NULL, all available GO terms are displayed.
+#' @param method_col Column containing normalisation methods.
+#' @param cluster_col Column containing cluster assignments.
+#' @param method_order Optional normalisation method order.
+#' @param methods Optional methods to display.
+#' @param title Optional plot title.
+#' @param subtitle Optional plot subtitle.
+#' @param point_size_range Minimum and maximum point sizes.
+#' @param ncol Number of facet columns.
+#' @param theme_name Plot theme.
 #'
-#' @return A list containing plotting data and plot.
+#' @return A list containing plotting data, full GO data,
+#'   and the plot.
 #'
 #' @export
 plot_go <- function(
@@ -592,7 +593,11 @@ plot_go <- function(
     cluster_col = "cluster",
     method_order = NULL,
     point_size_range = c(2, 7),
-    theme_name = "classic"
+    theme_name = "classic",
+    methods = NULL,
+    title = NULL,
+    subtitle = NULL,
+    ncol = 3
 ) {
 
   # ----------------------------------------------------------
@@ -601,8 +606,7 @@ plot_go <- function(
 
   if (
     is.list(go_result) &&
-    "go" %in%
-    names(go_result)
+    "go" %in% names(go_result)
   ) {
 
     df <- go_result$go
@@ -614,8 +618,8 @@ plot_go <- function(
   } else {
 
     stop(
-      "'go_result' must be the output from 'calculate_go()' ",
-      "or a GO data frame."
+      "'go_result' must be the output from ",
+      "'calculate_go()' or a GO data frame."
     )
   }
 
@@ -625,12 +629,8 @@ plot_go <- function(
   # ----------------------------------------------------------
 
   if (nrow(df) == 0) {
-
-    stop(
-      "No GO enrichment results are available to plot."
-    )
+    stop("No GO enrichment results are available.")
   }
-
 
   required_cols <- c(
     method_col,
@@ -642,97 +642,116 @@ plot_go <- function(
     "log10_padj"
   )
 
-
   missing_cols <- setdiff(
     required_cols,
     colnames(df)
   )
 
-
   if (length(missing_cols) > 0) {
-
     stop(
-      "The following required column(s) are missing: ",
-      paste(
-        missing_cols,
-        collapse = ", "
-      )
+      "Missing columns: ",
+      paste(missing_cols, collapse = ", ")
     )
   }
 
 
   # ----------------------------------------------------------
-  # Resolve methods
+  # Select methods
   # ----------------------------------------------------------
 
   available_methods <- unique(
-    as.character(
-      df[[method_col]]
-    )
+    as.character(df[[method_col]])
   )
 
-
-  if (is.null(method_order)) {
-
+  if (is.null(methods)) {
     methods <- available_methods
-
-  } else {
-
-    methods <- method_order[
-      method_order %in%
-        available_methods
-    ]
   }
 
+  unknown <- setdiff(
+    methods,
+    available_methods
+  )
+
+  if (length(unknown) > 0) {
+    stop(
+      "Unknown methods: ",
+      paste(unknown, collapse = ", ")
+    )
+  }
+
+  if (!is.null(method_order)) {
+
+    methods <- c(
+      intersect(method_order, methods),
+      setdiff(methods, method_order)
+    )
+  }
 
   df <- df[
-    df[[method_col]] %in%
-      methods,
+    df[[method_col]] %in% methods,
     ,
     drop = FALSE
   ]
 
 
   # ----------------------------------------------------------
-  # Top N GO terms per method and cluster
+  # Retain full selected GO results
   # ----------------------------------------------------------
 
-  split_df <- split(
-    df,
-    interaction(
-      df[[method_col]],
-      df[[cluster_col]],
-      drop = TRUE
-    )
-  )
+  full_df <- df
 
 
-  plot_list <- lapply(
-    split_df,
-    function(x) {
+  # ----------------------------------------------------------
+  # Select top GO terms
+  # ----------------------------------------------------------
 
-      x <- x[
-        order(
-          x$p.adjust
-        ),
-        ,
-        drop = FALSE
-      ]
+  if (!is.null(top_n)) {
 
-
-      utils::head(
-        x,
-        top_n
-      )
+    if (
+      length(top_n) != 1 ||
+      !is.numeric(top_n) ||
+      is.na(top_n) ||
+      top_n < 1 ||
+      top_n != floor(top_n)
+    ) {
+      stop("top_n must be a positive integer or NULL.")
     }
-  )
 
+    split_df <- split(
+      df,
+      interaction(
+        df[[method_col]],
+        df[[cluster_col]],
+        drop = TRUE
+      )
+    )
 
-  plot_df <- do.call(
-    rbind,
-    plot_list
-  )
+    plot_list <- lapply(
+      split_df,
+      function(x) {
 
+        x <- x[
+          order(x$p.adjust),
+          ,
+          drop = FALSE
+        ]
+
+        utils::head(
+          x,
+          top_n
+        )
+      }
+    )
+
+    plot_df <- do.call(
+      rbind,
+      plot_list
+    )
+
+  } else {
+
+    plot_df <- df
+  }
 
   rownames(plot_df) <- NULL
 
@@ -745,7 +764,6 @@ plot_go <- function(
     plot_df[[method_col]],
     levels = methods
   )
-
 
   plot_df[[cluster_col]] <- factor(
     plot_df[[cluster_col]]
@@ -763,7 +781,6 @@ plot_go <- function(
       y = .data$Description
     )
   ) +
-
     ggplot2::geom_point(
       ggplot2::aes(
         size = .data$Count,
@@ -771,55 +788,41 @@ plot_go <- function(
         shape = .data[[method_col]]
       )
     ) +
-
     ggplot2::facet_wrap(
       stats::as.formula(
-        paste(
-          "~",
-          cluster_col
-        )
+        paste("~", cluster_col)
       ),
-      scales = "free_y"
+      scales = "free_y",
+      ncol = ncol
     ) +
-
     ggplot2::scale_size_continuous(
       range = point_size_range
     ) +
-
     ggplot2::scale_colour_viridis_c() +
-
     ggplot2::labs(
+      title = title,
+      subtitle = subtitle,
       x = "Gene ratio",
-      y = "GO biological process",
+      y = "GO term",
       size = "Gene count",
       shape = "Normalisation method",
       colour = expression(
         -log[10]("Adjusted p-value")
       )
     ) +
-
-    .get_plot_theme(
-      theme_name
-    ) +
-
+    .get_plot_theme(theme_name) +
     ggplot2::theme(
-
-      panel.grid =
-        ggplot2::element_blank(),
-
-      strip.background =
-        ggplot2::element_blank(),
-
-      strip.text =
-        ggplot2::element_text(
-          size = 9
-        ),
-
-      axis.text.y =
-        ggplot2::element_text(
-          size = 8
-        ),
-
+      panel.grid = ggplot2::element_blank(),
+      strip.background = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(
+        size = 9
+      ),
+      axis.text.y = ggplot2::element_text(
+        size = 8
+      ),
+      plot.title = ggplot2::element_text(
+        face = "bold"
+      ),
       legend.position = "right"
     )
 
@@ -828,9 +831,12 @@ plot_go <- function(
   # Return
   # ----------------------------------------------------------
 
-  list(
-    data = plot_df,
-    plot = p
+  return(
+    list(
+      data = plot_df,
+      full_data = full_df,
+      plot = p
+    )
   )
 }
 

@@ -1,3 +1,4 @@
+
 # ============================================================
 # Spatial expression plots
 # ============================================================
@@ -5,36 +6,33 @@
 
 #' Plot spatial expression across normalisation methods
 #'
-#' Plot spatial expression of selected genes across multiple
-#' normalisation methods.
+#' Visualise spatial expression of selected genes across
+#' multiple normalisation methods.
 #'
-#' When `scale_expr = TRUE`, expression is scaled from 0 to 1
-#' separately for each gene across all normalisation methods.
-#' The resulting maps are displayed using a facet grid with
-#' methods in rows and genes in columns.
+#' Expression can be scaled between 0 and 1 either across
+#' all selected methods for each gene or independently
+#' within each gene and normalisation method.
 #'
-#' When `scale_expr = FALSE`, the original expression values
-#' from the selected assay are retained. A separate plot is
-#' created for each gene, with normalisation methods shown as
-#' facets. Therefore, each gene has its own colour scale.
+#' When scale_expr = FALSE, original assay values are used.
+#' Each gene receives a separate plot with a common colour
+#' scale across the selected methods.
 #'
 #' @param norm_list Named list of normalised SpatialExperiment
 #'   objects.
-#' @param genes Character vector containing genes to plot.
-#' @param assay_name Name of assay containing expression values.
-#'   Default is `"logcounts"`.
-#' @param method_order Optional character vector specifying the
-#'   order of normalisation methods.
-#' @param scale_expr Logical. If TRUE, expression is scaled
-#'   between 0 and 1 within each gene across all methods.
-#' @param point_size Point size for spatial locations.
+#' @param genes Character vector of genes to plot.
+#' @param methods Optional character vector of normalisation
+#'   methods. If NULL, all available methods are used.
+#' @param assay_name Name of the expression assay.
+#' @param method_order Optional ordering of selected methods.
+#' @param scale_expr Logical. Whether to scale expression.
+#' @param scale_by Scaling approach: "gene" or "gene_method".
+#' @param point_size Spatial point size.
 #' @param colour_option Viridis colour option.
-#' @param ncol_genes Number of columns used when combining
-#'   gene-specific unscaled plots.
-#' @param theme_name Plot theme. One of `"classic"`, `"bw"`,
-#'   `"minimal"`, or `"gray"`.
+#' @param ncol_genes Number of columns for unscaled plots.
+#' @param theme_name Plot theme.
 #'
-#' @return A list containing the plotting data and plot.
+#' @return A list containing plotting data, individual
+#'   gene plots when unscaled, and the combined plot.
 #'
 #' @export
 plot_spatial_expression <- function(
@@ -46,20 +44,57 @@ plot_spatial_expression <- function(
     point_size = 0.5,
     colour_option = "magma",
     ncol_genes = 1,
-    theme_name = "classic"
+    theme_name = "classic",
+    methods = NULL,
+    scale_by = c("gene", "gene_method")
 ) {
 
   # ----------------------------------------------------------
-  # Resolve methods
+  # Resolve selected methods
   # ----------------------------------------------------------
 
-  methods <- .resolve_methods(
-    norm_list,
-    method_order
-  )
+  scale_by <- match.arg(scale_by)
+
+  if (is.null(methods)) {
+    methods <- names(norm_list)
+  }
 
   if (length(methods) == 0) {
-    stop("No valid normalisation methods were found.")
+    stop("No normalisation methods were selected.")
+  }
+
+  unknown_methods <- setdiff(
+    methods,
+    names(norm_list)
+  )
+
+  if (length(unknown_methods) > 0) {
+    stop(
+      "Unknown normalisation methods: ",
+      paste(unknown_methods, collapse = ", ")
+    )
+  }
+
+  methods <- unique(methods)
+
+  if (!is.null(method_order)) {
+
+    unknown_order <- setdiff(
+      method_order,
+      names(norm_list)
+    )
+
+    if (length(unknown_order) > 0) {
+      stop(
+        "Unknown methods in method_order: ",
+        paste(unknown_order, collapse = ", ")
+      )
+    }
+
+    methods <- c(
+      intersect(method_order, methods),
+      setdiff(methods, method_order)
+    )
   }
 
 
@@ -68,7 +103,6 @@ plot_spatial_expression <- function(
   # ----------------------------------------------------------
 
   df_list <- list()
-
 
   for (method in methods) {
 
@@ -142,11 +176,8 @@ plot_spatial_expression <- function(
     for (gene in genes_use) {
 
       temp <- data.frame(
-
         x = coords[, 1],
-
         y = coords[, 2],
-
         expression = as.numeric(
           expr_mat[
             gene,
@@ -154,21 +185,13 @@ plot_spatial_expression <- function(
             drop = TRUE
           ]
         ),
-
         gene = gene,
-
         method = method,
-
         stringsAsFactors = FALSE
       )
 
-
       df_list[[
-        paste(
-          method,
-          gene,
-          sep = "_"
-        )
+        paste(method, gene, sep = "_")
       ]] <- temp
     }
   }
@@ -179,9 +202,9 @@ plot_spatial_expression <- function(
   # ----------------------------------------------------------
 
   if (length(df_list) == 0) {
-
     stop(
-      "None of the requested genes were available in the supplied objects."
+      "None of the requested genes were available ",
+      "in the selected methods."
     )
   }
 
@@ -190,17 +213,9 @@ plot_spatial_expression <- function(
   # Combine
   # ----------------------------------------------------------
 
-  df <- do.call(
-    rbind,
+  df <- dplyr::bind_rows(
     df_list
   )
-
-  rownames(df) <- NULL
-
-
-  # ----------------------------------------------------------
-  # Factor ordering
-  # ----------------------------------------------------------
 
   df$method <- factor(
     df$method,
@@ -215,38 +230,53 @@ plot_spatial_expression <- function(
 
   # ==========================================================
   # SCALED EXPRESSION
-  #
-  # Scale each gene across ALL methods.
-  #
-  # Therefore:
-  # PLP1 across none/scran/SCT/etc uses one 0-1 scale.
-  # MBP gets its own 0-1 scaling.
-  #
-  # This allows comparison of the same gene across methods.
   # ==========================================================
 
   if (scale_expr) {
 
-    df_scaled <- df |>
-      dplyr::group_by(
-        .data$gene
-      ) |>
-      dplyr::mutate(
+    # --------------------------------------------------------
+    # Scale each gene across all selected methods
+    # --------------------------------------------------------
 
-        expression_scaled =
-          .scale_zero_one(
+    if (scale_by == "gene") {
+
+      df_scaled <- df |>
+        dplyr::group_by(
+          .data$gene
+        ) |>
+        dplyr::mutate(
+          expression_scaled = .scale_zero_one(
             .data$expression
           )
+        ) |>
+        dplyr::ungroup()
 
-      ) |>
-      dplyr::ungroup()
+    }
 
 
     # --------------------------------------------------------
-    # Facet grid:
-    #
-    # columns = genes
-    # rows    = methods
+    # Scale each gene independently within each method
+    # --------------------------------------------------------
+
+    if (scale_by == "gene_method") {
+
+      df_scaled <- df |>
+        dplyr::group_by(
+          .data$gene,
+          .data$method
+        ) |>
+        dplyr::mutate(
+          expression_scaled = .scale_zero_one(
+            .data$expression
+          )
+        ) |>
+        dplyr::ungroup()
+
+    }
+
+
+    # --------------------------------------------------------
+    # Faceted spatial expression maps
     # --------------------------------------------------------
 
     p <- ggplot2::ggplot(
@@ -257,53 +287,34 @@ plot_spatial_expression <- function(
         colour = .data$expression_scaled
       )
     ) +
-
       ggplot2::geom_point(
         size = point_size
       ) +
-
       ggplot2::facet_grid(
         method ~ gene
       ) +
-
       ggplot2::coord_fixed() +
-
       viridis::scale_colour_viridis(
         option = colour_option,
-        limits = c(
-          0,
-          1
-        ),
+        limits = c(0, 1),
         name = "Scaled\nexpression"
       ) +
-
       ggplot2::labs(
         x = "x",
         y = "y"
       ) +
-
       .get_plot_theme(
         theme_name
       ) +
-
       ggplot2::theme(
-
-        panel.grid =
-          ggplot2::element_blank(),
-
-        strip.background =
-          ggplot2::element_blank(),
-
-        strip.text =
-          ggplot2::element_text(
-            size = 9
-          ),
-
-        axis.text =
-          ggplot2::element_text(
-            size = 8
-          ),
-
+        panel.grid = ggplot2::element_blank(),
+        strip.background = ggplot2::element_blank(),
+        strip.text = ggplot2::element_text(
+          size = 9
+        ),
+        axis.text = ggplot2::element_text(
+          size = 8
+        ),
         legend.position = "right"
       )
 
@@ -319,22 +330,9 @@ plot_spatial_expression <- function(
 
   # ==========================================================
   # ORIGINAL EXPRESSION
-  #
-  # Original assay values are retained.
-  #
-  # Each gene gets a SEPARATE plot.
-  # Methods are wrapped within each gene.
-  #
-  # Therefore:
-  # - PLP1 has one colour scale across methods
-  # - MBP has another colour scale across methods
-  # - GFAP has another colour scale across methods
-  #
-  # Methods remain directly comparable within each gene.
   # ==========================================================
 
   gene_plots <- list()
-
 
   for (gene_use in genes) {
 
@@ -344,14 +342,13 @@ plot_spatial_expression <- function(
       drop = FALSE
     ]
 
-
     if (nrow(gene_df) == 0) {
       next
     }
 
 
     # --------------------------------------------------------
-    # Expression limits for this gene across all methods
+    # Gene-specific colour scale across selected methods
     # --------------------------------------------------------
 
     gene_limits <- range(
@@ -372,61 +369,42 @@ plot_spatial_expression <- function(
         colour = .data$expression
       )
     ) +
-
       ggplot2::geom_point(
         size = point_size
       ) +
-
       ggplot2::facet_wrap(
         ~ method,
         nrow = 1
       ) +
-
       ggplot2::coord_fixed() +
-
       viridis::scale_colour_viridis(
         option = colour_option,
         limits = gene_limits,
         name = "Expression"
       ) +
-
       ggplot2::labs(
         title = gene_use,
         x = "x",
         y = "y"
       ) +
-
       .get_plot_theme(
         theme_name
       ) +
-
       ggplot2::theme(
-
-        panel.grid =
-          ggplot2::element_blank(),
-
-        strip.background =
-          ggplot2::element_blank(),
-
-        strip.text =
-          ggplot2::element_text(
-            size = 9
-          ),
-
-        axis.text =
-          ggplot2::element_text(
-            size = 8
-          ),
-
-        plot.title =
-          ggplot2::element_text(
-            hjust = 0.5,
-            face = "bold"
-          ),
-
+        panel.grid = ggplot2::element_blank(),
+        strip.background = ggplot2::element_blank(),
+        strip.text = ggplot2::element_text(
+          size = 9
+        ),
+        axis.text = ggplot2::element_text(
+          size = 8
+        ),
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "bold"
+        ),
         legend.position = "right"
       )
-
 
     gene_plots[[gene_use]] <- p_gene
   }
