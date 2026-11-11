@@ -1,6 +1,6 @@
-# ============================================================
+
 # GO analysis from cluster-specific DE genes
-# ============================================================
+
 
 
 #' Calculate GO enrichment from cluster-specific DE genes
@@ -555,9 +555,9 @@ calculate_go <- function(
 
 
 
-# ============================================================
+
 # Plot GO enrichment
-# ============================================================
+
 
 
 #' Plot GO enrichment results
@@ -842,9 +842,9 @@ plot_go <- function(
 
 
 
-# ============================================================
+
 # Plot DE genes used for GO
-# ============================================================
+
 
 
 #' Plot cluster-specific DE genes used for GO

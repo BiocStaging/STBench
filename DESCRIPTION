@@ -36,7 +36,11 @@ Imports:
     scales,
     methods,
     rlang,
-    MatrixGenerics
+    MatrixGenerics,
+    tidyr,
+    tidyselect,
+    pROC,
+    grid
 Suggests:
     tibble,
     nnSVG,
@@ -46,6 +50,11 @@ Suggests:
     knitr,
     rmarkdown,
     testthat,
-    CellChat
+    CellChat,
+    aricode,
+    clevr
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr
+biocViews: Spatial, GeneExpression, Normalization,
+    QualityControl, Visualization, Clustering
+BugReports: https://github.com/Lahiru-lsb/STBench/issues

@@ -1,7 +1,7 @@
 
-# ============================================================
+
 # UMAP comparison across normalisation methods
-# ============================================================
+
 
 
 #' Calculate UMAP embeddings across normalisation methods
@@ -291,9 +291,9 @@ get_umap_data <- function(
 
 
 
-# ============================================================
+
 # Plot previously calculated UMAP embeddings
-# ============================================================
+
 
 
 #' Plot UMAP comparisons across normalisation methods

@@ -1,7 +1,7 @@
 
-# ============================================================
+
 # Normalised library-size comparison
-# ============================================================
+
 
 
 #' Compare normalised library sizes across methods
@@ -38,9 +38,9 @@ plot_library_size_comparison <- function(
     theme_name = "classic"
 ) {
 
-  # ----------------------------------------------------------
+
   # Select methods
-  # ----------------------------------------------------------
+
 
   excluded <- c(
     "sct",
@@ -85,9 +85,9 @@ plot_library_size_comparison <- function(
   methods <- unique(methods)
 
 
-  # ----------------------------------------------------------
+
   # Calculate normalised library sizes
-  # ----------------------------------------------------------
+
 
   comparison_data <- lapply(
     methods,
@@ -161,9 +161,9 @@ plot_library_size_comparison <- function(
   )
 
 
-  # ----------------------------------------------------------
+
   # Combine data
-  # ----------------------------------------------------------
+
 
   df <- dplyr::bind_rows(
     comparison_data
@@ -174,10 +174,16 @@ plot_library_size_comparison <- function(
     levels = methods
   )
 
+  df <- df %>%
+    group_by(method) %>%
+    mutate(
+      q = quantile(log_expression_total, 0.98, na.rm = TRUE),
+      adj.log.exprs = pmin(log_expression_total, q)
+    ) %>%
+    ungroup()
 
-  # ----------------------------------------------------------
   # Boxplot comparison
-  # ----------------------------------------------------------
+
 
   p_boxplot <- ggplot2::ggplot(
     df,
@@ -195,7 +201,7 @@ plot_library_size_comparison <- function(
     ) +
     ggplot2::labs(
       x = "Normalisation method",
-      y = "Log total normalised expression"
+      y = "Log library size"
     ) +
     .get_plot_theme(theme_name) +
     ggplot2::theme(
@@ -208,16 +214,16 @@ plot_library_size_comparison <- function(
     )
 
 
-  # ----------------------------------------------------------
+
   # Spatial maps
-  # ----------------------------------------------------------
+
 
   p_spatial <- ggplot2::ggplot(
     df,
     ggplot2::aes(
       x = .data$x,
       y = .data$y,
-      colour = .data$log_expression_total
+      colour = .data$adj.log.exprs
     )
   ) +
     ggplot2::geom_point(
@@ -244,9 +250,9 @@ plot_library_size_comparison <- function(
     )
 
 
-  # ----------------------------------------------------------
+
   # Combine plots
-  # ----------------------------------------------------------
+
 
   p_combined <- patchwork::wrap_plots(
     p_boxplot,
@@ -255,9 +261,9 @@ plot_library_size_comparison <- function(
   )
 
 
-  # ----------------------------------------------------------
+
   # Return
-  # ----------------------------------------------------------
+
 
   return(
     list(

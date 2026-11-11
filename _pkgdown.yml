@@ -1,4 +1,8 @@
 url: https://lahiru-lsb.github.io/STBench/
+
 template:
   bootstrap: 5
-
+  bootswatch: flatly
+  bslib:
+    primary: "#2471A3"
+    navbar-bg: "#154360"

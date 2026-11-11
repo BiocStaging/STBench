@@ -1,7 +1,7 @@
 
-# ============================================================
+
 # Spatial expression plots
-# ============================================================
+
 
 
 #' Plot spatial expression across normalisation methods

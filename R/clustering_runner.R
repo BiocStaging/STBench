@@ -1,765 +1,274 @@
-# ============================================================
-# BANKSY clustering
-# ============================================================
+# BANKSY clustering evaluation utilities for an R package
 
-
-#' Run BANKSY clustering independently for each slice
+#' Calculate BANKSY clustering evaluation metrics
 #'
-#' Run BANKSY clustering independently across normalisation
-#' methods and spatial slices.
+#' Calculates ARI, NMI, homogeneity, completeness, and spatial average
+#' silhouette width (ASW) for each normalisation method and spatial slice.
+#' Overall is the unweighted mean of NMI, HOM, and COM; it is a user-defined
+#' composite agreement score rather than a standard accuracy measure.
 #'
-#' BANKSY cluster assignments are added to the colData of each
-#' SpatialExperiment object so that the same objects can be used
-#' in downstream clustering evaluation, plotting, differential
-#' expression, and GO enrichment analyses.
+#' ASW uses Euclidean distances between the first two spatial coordinates,
+#' not expression-space distances. For large slices, ASW is estimated from
+#' a random subset of cells to limit memory requirements.
 #'
-#' The function supports either:
-#' \itemize{
-#'   \item a named list of SpatialExperiment objects, or
-#'   \item a named list where each method contains a named list
-#'   of SpatialExperiment objects corresponding to multiple slices.
-#' }
+#' @param norm_list Named list of SpatialExperiment objects, or a named list
+#'   whose elements are named lists of SpatialExperiment objects (slices).
+#' @param ground_truth_col Name of the colData column containing reference labels.
+#' @param cluster_col Name of the colData column containing predicted clusters.
+#' @param methods Optional vector of normalisation methods to evaluate.
+#' @param nmi_variant NMI normalisation; one of "sum", "max", "min", "sqrt",
+#'   or "joint". "sum" uses arithmetic-mean entropy normalization.
+#' @param asw_max_cells Maximum number of cells used to calculate spatial ASW
+#'   per slice. Larger slices are randomly subsampled.
+#' @param seed Integer random seed for reproducible ASW subsampling.
 #'
-#' @param norm_list Named list containing normalised
-#'   SpatialExperiment objects.
-#' @param methods Optional character vector specifying the
-#'   normalisation methods to analyse.
-#' @param assay_name Name of the assay used by BANKSY.
-#' @param cluster_col Name of the colData column used to store
-#'   BANKSY cluster assignments.
-#' @param k_geom Number of spatial neighbours used by BANKSY.
-#' @param lambda BANKSY spatial weighting parameter.
-#' @param resolution Resolution parameter used for clustering.
-#' @param seed Random seed for reproducibility.
-#'
-#' @return Named list with the same structure as `norm_list`.
-#'   BANKSY cluster assignments are added to the colData of
-#'   each SpatialExperiment object.
-#'
+#' @return Data frame with method, slice, n, ARI, NMI, HOM, COM, ASW,
+#'   Overall, n_asw, and ASW_sampled.
 #' @export
-run_banksy_individual <- function(
-    norm_list,
-    methods = names(norm_list),
-    assay_name = "logcounts",
-    cluster_col = "banksy_cluster",
-    k_geom = 15,
-    lambda = 0.8,
-    resolution = 0.2,
-    seed = 123
-) {
-
-  # ----------------------------------------------------------
-  # Check input
-  # ----------------------------------------------------------
-
-  .check_named_list(
-    norm_list
-  )
-
-
-  missing_methods <- setdiff(
-    methods,
-    names(norm_list)
-  )
-
-
-  if (length(missing_methods) > 0) {
-
-    stop(
-      "The following methods are not present in 'norm_list': ",
-      paste(
-        missing_methods,
-        collapse = ", "
-      )
-    )
-  }
-
-
-  # ----------------------------------------------------------
-  # Copy input
-  # ----------------------------------------------------------
-
-  out <- norm_list
-
-
-  # ----------------------------------------------------------
-  # Run BANKSY
-  # ----------------------------------------------------------
-
-  for (method in methods) {
-
-    method_data <- norm_list[[method]]
-
-
-    # --------------------------------------------------------
-    # Single SpatialExperiment
-    # --------------------------------------------------------
-
-    if (
-      methods::is(
-        method_data,
-        "SpatialExperiment"
-      )
-    ) {
-
-      spe_list <- list(
-        slice1 = method_data
-      )
-
-      single_spe <- TRUE
-
-
-      # --------------------------------------------------------
-      # Multiple SpatialExperiment slices
-      # --------------------------------------------------------
-
-    } else if (is.list(method_data)) {
-
-      spe_list <- method_data
-
-      single_spe <- FALSE
-
-
-      if (
-        is.null(names(spe_list)) ||
-        any(names(spe_list) == "")
-      ) {
-
-        stop(
-          "Slice lists must be named for method: ",
-          method
-        )
-      }
-
-
-    } else {
-
-      stop(
-        "Each normalisation method must contain either a ",
-        "SpatialExperiment object or a named list of ",
-        "SpatialExperiment objects."
-      )
-    }
-
-
-    # --------------------------------------------------------
-    # Process slices
-    # --------------------------------------------------------
-
-    for (slice_name in names(spe_list)) {
-
-      spe <- spe_list[[slice_name]]
-
-
-      # ------------------------------------------------------
-      # Check SPE
-      # ------------------------------------------------------
-
-      if (
-        !methods::is(
-          spe,
-          "SpatialExperiment"
-        )
-      ) {
-
-        stop(
-          "Object for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "' is not a SpatialExperiment."
-        )
-      }
-
-
-      # ------------------------------------------------------
-      # Check assay
-      # ------------------------------------------------------
-
-      if (
-        !assay_name %in%
-        SummarizedExperiment::assayNames(spe)
-      ) {
-
-        stop(
-          "Assay '",
-          assay_name,
-          "' not found for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "'."
-        )
-      }
-
-
-      # ------------------------------------------------------
-      # Compute BANKSY
-      # ------------------------------------------------------
-
-      spe <- Banksy::computeBanksy(
-        spe,
-        assay_name = assay_name,
-        compute_agf = FALSE,
-        k_geom = k_geom
-      )
-
-
-      # ------------------------------------------------------
-      # Run BANKSY PCA
-      # ------------------------------------------------------
-
-      spe <- Banksy::runBanksyPCA(
-        spe,
-        lambda = lambda,
-        use_agf = FALSE,
-        seed = seed
-      )
-
-
-      # ------------------------------------------------------
-      # Run BANKSY clustering
-      # ------------------------------------------------------
-
-      spe <- Banksy::clusterBanksy(
-        spe,
-        lambda = lambda,
-        use_agf = FALSE,
-        resolution = resolution,
-        seed = seed
-      )
-
-
-      # ------------------------------------------------------
-      # Identify BANKSY cluster column
-      # ------------------------------------------------------
-
-      cluster_name <- grep(
-        "^clust_",
-        colnames(
-          SummarizedExperiment::colData(spe)
-        ),
-        value = TRUE
-      )
-
-
-      if (length(cluster_name) == 0) {
-
-        stop(
-          "BANKSY cluster column could not be identified ",
-          "for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "'."
-        )
-      }
-
-
-      cluster_name <- utils::tail(
-        cluster_name,
-        1
-      )
-
-
-      # ------------------------------------------------------
-      # Store standard cluster column
-      # ------------------------------------------------------
-
-      SummarizedExperiment::colData(spe)[[cluster_col]] <-
-        as.factor(
-          SummarizedExperiment::colData(spe)[[
-            cluster_name
-          ]]
-        )
-
-
-      # ------------------------------------------------------
-      # Store updated SPE
-      # ------------------------------------------------------
-
-      spe_list[[slice_name]] <- spe
-    }
-
-
-    # --------------------------------------------------------
-    # Restore original structure
-    # --------------------------------------------------------
-
-    if (single_spe) {
-
-      out[[method]] <- spe_list[[1]]
-
-    } else {
-
-      out[[method]] <- spe_list
-    }
-  }
-
-
-  # ----------------------------------------------------------
-  # Return
-  # ----------------------------------------------------------
-
-  out
-}
-
-
-
-# ============================================================
-# Adjusted Rand index
-# ============================================================
-
-
-#' Calculate adjusted Rand index
-#'
-#' Calculate the adjusted Rand index between clustering
-#' assignments and user-specified ground-truth labels across
-#' normalisation methods and spatial slices.
-#'
-#' @param norm_list Named list of SpatialExperiment objects
-#'   containing clustering results.
-#' @param ground_truth_col Name of the colData column containing
-#'   ground-truth labels.
-#' @param cluster_col Name of the colData column containing
-#'   cluster assignments.
-#' @param methods Optional character vector specifying the
-#'   normalisation methods to analyse.
-#'
-#' @return A data frame containing ARI values for each
-#'   normalisation method and spatial slice.
-#'
-#' @export
-calculate_ari <- function(
+calculate_clustering_metrics <- function(
     norm_list,
     ground_truth_col,
     cluster_col = "banksy_cluster",
-    methods = names(norm_list)
+    methods = names(norm_list),
+    nmi_variant = "sum",
+    asw_max_cells = 3000L,
+    seed = 123L
 ) {
-
-  # ----------------------------------------------------------
-  # Check input
-  # ----------------------------------------------------------
-
-  .check_named_list(
-    norm_list
-  )
-
-
-  missing_methods <- setdiff(
-    methods,
-    names(norm_list)
-  )
-
-
-  if (length(missing_methods) > 0) {
-
-    stop(
-      "The following methods are not present in 'norm_list': ",
-      paste(
-        missing_methods,
-        collapse = ", "
-      )
-    )
+  if (!is.list(norm_list) || is.null(names(norm_list)) ||
+      anyNA(names(norm_list)) || any(!nzchar(names(norm_list))) ||
+      anyDuplicated(names(norm_list))) {
+    stop("'norm_list' must be a list with unique, nonempty method names.")
   }
-
-
-  # ----------------------------------------------------------
-  # Initialise output
-  # ----------------------------------------------------------
-
-  out_list <- list()
-
-
-  # ----------------------------------------------------------
-  # Calculate ARI
-  # ----------------------------------------------------------
+  if (!is.character(ground_truth_col) || length(ground_truth_col) != 1L ||
+      is.na(ground_truth_col) || !nzchar(ground_truth_col)) {
+    stop("'ground_truth_col' must be a nonempty column name.")
+  }
+  if (!is.character(cluster_col) || length(cluster_col) != 1L ||
+      is.na(cluster_col) || !nzchar(cluster_col)) {
+    stop("'cluster_col' must be a nonempty column name.")
+  }
+  nmi_variant <- match.arg(nmi_variant, c("sum", "max", "min", "sqrt", "joint"))
+  if (length(asw_max_cells) != 1L || is.na(asw_max_cells) ||
+      !is.finite(asw_max_cells) || asw_max_cells < 3L) {
+    stop("'asw_max_cells' must be at least 3.")
+  }
+  if (!is.character(methods) || anyNA(methods) ||
+      anyDuplicated(methods) || !length(methods) ||
+      any(!methods %in% names(norm_list))) {
+    stop("'methods' must contain distinct, available method names.")
+  }
+  results <- list()
+  index <- 1L
 
   for (method in methods) {
-
     method_data <- norm_list[[method]]
-
-
-    # --------------------------------------------------------
-    # Single SPE
-    # --------------------------------------------------------
-
-    if (
-      methods::is(
-        method_data,
-        "SpatialExperiment"
-      )
-    ) {
-
-      spe_list <- list(
-        slice1 = method_data
-      )
-
-
-      # --------------------------------------------------------
-      # Multiple slices
-      # --------------------------------------------------------
-
-    } else if (is.list(method_data)) {
-
-      spe_list <- method_data
-
-
+    if (methods::is(method_data, "SpatialExperiment")) {
+      slices <- list(slice1 = method_data)
+    } else if (is.list(method_data) && length(method_data) &&
+               !is.null(names(method_data)) &&
+               !anyNA(names(method_data)) &&
+               all(nzchar(names(method_data))) &&
+               !anyDuplicated(names(method_data))) {
+      slices <- method_data
     } else {
-
-      stop(
-        "Each method must contain either a SpatialExperiment ",
-        "or a list of SpatialExperiment objects."
-      )
+      stop("Invalid or unnamed slices in method: ", method)
     }
 
-
-    # --------------------------------------------------------
-    # Process slices
-    # --------------------------------------------------------
-
-    for (slice_name in names(spe_list)) {
-
-      spe <- spe_list[[slice_name]]
-
-
-      cd <- SummarizedExperiment::colData(
-        spe
-      )
-
-
-      # ------------------------------------------------------
-      # Check columns
-      # ------------------------------------------------------
-
-      required_cols <- c(
-        ground_truth_col,
-        cluster_col
-      )
-
-
-      missing_cols <- setdiff(
-        required_cols,
-        colnames(cd)
-      )
-
-
-      if (length(missing_cols) > 0) {
-
-        stop(
-          "Missing colData column(s) for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "': ",
-          paste(
-            missing_cols,
-            collapse = ", "
-          )
-        )
+    for (slice_name in names(slices)) {
+      spe <- slices[[slice_name]]
+      if (!methods::is(spe, "SpatialExperiment")) {
+        stop("Expected SpatialExperiment: ", method, " / ", slice_name)
       }
-
-
-      # ------------------------------------------------------
-      # Extract labels
-      # ------------------------------------------------------
-
-      cluster <- cd[[cluster_col]]
-
-      truth <- cd[[ground_truth_col]]
-
-
-      # ------------------------------------------------------
-      # Remove missing values
-      # ------------------------------------------------------
-
-      keep <- !is.na(cluster) &
-        !is.na(truth)
-
-
-      cluster <- cluster[
-        keep
-      ]
-
-      truth <- truth[
-        keep
-      ]
-
-
-      # ------------------------------------------------------
-      # Check data
-      # ------------------------------------------------------
-
-      if (length(cluster) == 0) {
-
-        warning(
-          "No complete observations for method '",
-          method,
-          "', slice '",
-          slice_name,
-          "'.",
-          call. = FALSE
-        )
-
+      cd <- SummarizedExperiment::colData(spe)
+      missing_cols <- setdiff(c(ground_truth_col, cluster_col), colnames(cd))
+      if (length(missing_cols)) {
+        stop("Missing colData columns for ", method, " / ", slice_name,
+             ": ", paste(missing_cols, collapse = ", "))
+      }
+      truth <- as.character(cd[[ground_truth_col]])
+      predicted <- as.character(cd[[cluster_col]])
+      coords <- as.matrix(SpatialExperiment::spatialCoords(spe))
+      if (nrow(coords) != length(truth) || ncol(coords) < 2L) {
+        stop("Invalid spatial coordinates for ", method, " / ", slice_name)
+      }
+      coords <- coords[, 1:2, drop = FALSE]
+      storage.mode(coords) <- "double"
+      keep <- !is.na(truth) & nzchar(truth) &
+        !is.na(predicted) & nzchar(predicted) &
+        stats::complete.cases(coords) & rowSums(is.finite(coords)) == 2L
+      truth <- truth[keep]
+      predicted <- predicted[keep]
+      coords <- coords[keep, , drop = FALSE]
+      n <- length(truth)
+      if (!n) {
+        warning("No complete observations: ", method, " / ", slice_name,
+                call. = FALSE)
         next
       }
 
+      ari <- mclust::adjustedRandIndex(truth, predicted)
+      nmi <- aricode::NMI(factor(truth), factor(predicted), variant = nmi_variant)
+      hom <- clevr::homogeneity(truth, predicted)
+      com <- clevr::completeness(truth, predicted)
+      overall <- mean(c(nmi, hom, com))
 
-      # ------------------------------------------------------
-      # Calculate ARI
-      # ------------------------------------------------------
-
-      ari_value <- mclust::adjustedRandIndex(
-        cluster,
-        truth
-      )
-
-
-      # ------------------------------------------------------
-      # Store result
-      # ------------------------------------------------------
-
-      out_list[[
-        paste(
-          method,
-          slice_name,
-          sep = "_"
-        )
-      ]] <- data.frame(
-
-        method = method,
-
-        slice = slice_name,
-
-        ARI = ari_value,
-
-        n = length(cluster),
-
+      n_asw <- n
+      sampled <- n > asw_max_cells
+      if (sampled) {
+        set.seed(seed)
+        ids <- sample.int(n, asw_max_cells)
+        asw_coords <- coords[ids, , drop = FALSE]
+        asw_clusters <- predicted[ids]
+        n_asw <- length(ids)
+      } else {
+        asw_coords <- coords
+        asw_clusters <- predicted
+      }
+      k <- length(unique(asw_clusters))
+      if (k < 2L || k >= n_asw) {
+        asw <- NA_real_
+        warning("ASW undefined (needs 2 <= number of clusters < n): ",
+                method, " / ", slice_name, call. = FALSE)
+      } else {
+        spatial_dist <- stats::dist(asw_coords, method = "euclidean")
+        sil <- cluster::silhouette(as.integer(factor(asw_clusters)), spatial_dist)
+        asw <- mean(sil[, "sil_width"])
+      }
+      results[[index]] <- data.frame(
+        method = method, slice = slice_name, n = n,
+        ARI = ari, NMI = nmi, HOM = hom, COM = com,
+        ASW = asw, Overall = overall,
+        n_asw = n_asw, ASW_sampled = sampled,
         stringsAsFactors = FALSE
       )
+      index <- index + 1L
     }
   }
-
-
-  # ----------------------------------------------------------
-  # Check output
-  # ----------------------------------------------------------
-
-  if (length(out_list) == 0) {
-
-    stop(
-      "No ARI values could be calculated."
-    )
-  }
-
-
-  # ----------------------------------------------------------
-  # Combine
-  # ----------------------------------------------------------
-
-  out <- do.call(
-    rbind,
-    out_list
-  )
-
-
+  if (!length(results)) stop("No metrics could be calculated.")
+  out <- do.call(rbind, results)
   rownames(out) <- NULL
-
-
-  # ----------------------------------------------------------
-  # Return
-  # ----------------------------------------------------------
-
   out
 }
 
 
-
-# ============================================================
-# ARI dot plot
-# ============================================================
-
-
-#' Plot adjusted Rand index
+#' Plot clustering metrics across normalisation methods
 #'
-#' Create a dot plot of adjusted Rand index values across
-#' normalisation methods.
+#' Each facet represents one clustering metric.
+#' Points are coloured by normalisation method.
 #'
-#' @param ari_df Data frame returned by `calculate_ari()`.
-#' @param method_col Name of the column containing normalisation
-#'   methods.
-#' @param ari_col Name of the column containing ARI values.
-#' @param method_order Optional character vector specifying the
-#'   order of normalisation methods.
+#' @param metrics_df Data frame from calculate_clustering_metrics().
+#' @param metrics Metrics to plot.
 #' @param point_size Point size.
-#' @param palette Optional named character vector specifying
-#'   colours for normalisation methods.
-#' @param theme_name Plot theme. One of `"classic"`, `"bw"`,
-#'   `"minimal"`, or `"gray"`.
+#' @param point_alpha Point opacity.
+#' @param ncol Number of facet columns.
+#' @param scales Facet scales.
+#' @param palette Optional named colours for normalisation methods.
+#' @param theme_name One of "classic", "bw", "minimal", "gray".
+#' @param rotate_x Angle of method labels.
 #'
-#' @return A list containing plotting data and plot.
-#'
+#' @return List containing data and ggplot object (`plot`).
 #' @export
-plot_ari <- function(
-    ari_df,
-    method_col = "method",
-    ari_col = "ARI",
-    method_order = NULL,
+plot_clustering_metrics <- function(
+    metrics_df,
+    metrics = c("ARI", "NMI", "HOM", "COM", "ASW", "Overall"),
     point_size = 4,
+    point_alpha = 0.9,
+    ncol = 3,
+    scales = "free_y",
     palette = NULL,
-    theme_name = "classic"
+    theme_name = "classic",
+    rotate_x = 45
 ) {
 
-  # ----------------------------------------------------------
   # Check input
-  # ----------------------------------------------------------
+  required <- c("method", metrics)
 
-  if (!is.data.frame(ari_df)) {
-
-    stop(
-      "'ari_df' must be a data frame."
-    )
+  if (!all(required %in% names(metrics_df))) {
+    stop("Required columns missing from metrics_df.")
   }
 
-
-  # ----------------------------------------------------------
-  # Check required columns
-  # ----------------------------------------------------------
-
-  required_cols <- c(
-    method_col,
-    ari_col
+  scales <- match.arg(
+    scales,
+    c("free_y", "fixed", "free", "free_x")
   )
 
-
-  missing_cols <- setdiff(
-    required_cols,
-    colnames(ari_df)
+  theme_name <- match.arg(
+    theme_name,
+    c("classic", "bw", "minimal", "gray")
   )
 
-
-  if (length(missing_cols) > 0) {
-
-    stop(
-      "The following required column(s) are missing: ",
-      paste(
-        missing_cols,
-        collapse = ", "
-      )
-    )
-  }
-
-
-  # ----------------------------------------------------------
-  # Resolve methods
-  # ----------------------------------------------------------
-
-  available_methods <- unique(
-    as.character(
-      ari_df[[method_col]]
-    )
-  )
-
-
-  if (is.null(method_order)) {
-
-    methods <- available_methods
-
-  } else {
-
-    methods <- method_order[
-      method_order %in%
-        available_methods
-    ]
-  }
-
-
-  if (length(methods) == 0) {
-
-    stop(
-      "No valid normalisation methods were found."
-    )
-  }
-
-
-  # ----------------------------------------------------------
   # Prepare plotting data
-  # ----------------------------------------------------------
+  df <- do.call(rbind, lapply(metrics, function(metric) {
 
-  df <- ari_df[
-    ari_df[[method_col]] %in%
-      methods,
-    ,
-    drop = FALSE
-  ]
+    data.frame(
+      method = as.character(metrics_df$method),
+      metric = metric,
+      score = as.numeric(metrics_df[[metric]]),
+      stringsAsFactors = FALSE
+    )
 
+  }))
 
-  df[[method_col]] <- factor(
-    df[[method_col]],
-    levels = methods
+  df$method <- factor(
+    df$method,
+    levels = unique(as.character(metrics_df$method))
   )
 
+  df$metric <- factor(
+    df$metric,
+    levels = metrics
+  )
 
-  # ----------------------------------------------------------
   # Plot
-  # ----------------------------------------------------------
-
   p <- ggplot2::ggplot(
     df,
     ggplot2::aes(
-      x = .data[[method_col]],
-      y = .data[[ari_col]],
-      colour = .data[[method_col]]
+      x = .data$method,
+      y = .data$score,
+      colour = .data$method
     )
   ) +
 
     ggplot2::geom_point(
-      size = point_size
+      size = point_size,
+      alpha = point_alpha
+    ) +
+
+    ggplot2::facet_wrap(
+      ~metric,
+      ncol = ncol,
+      scales = scales
     ) +
 
     ggplot2::labs(
-      x = "Normalisation method",
-      y = "Adjusted Rand index",
+      x = NULL,#"Normalisation method",
+      y = "Score",
       colour = "Method"
     ) +
 
-    .get_plot_theme(
-      theme_name
-    ) +
+    .get_plot_theme(theme_name) +
 
     ggplot2::theme(
-
-      panel.grid =
-        ggplot2::element_blank(),
-
-      legend.position = "right",
-
-      axis.text.x =
-        ggplot2::element_text(
-          angle = 45,
-          hjust = 1
-        )
+      axis.text.x = ggplot2::element_text(
+        angle = rotate_x,
+        hjust = 1
+      ),
+      strip.text = ggplot2::element_text(
+        face = "bold"
+      ),
+      panel.grid = ggplot2::element_blank(),
+      legend.position = "right"
     )
 
-
-  # ----------------------------------------------------------
   # Optional colour palette
-  # ----------------------------------------------------------
-
   if (!is.null(palette)) {
-
     p <- p +
-
       ggplot2::scale_colour_manual(
         values = palette
       )
   }
 
-
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
-
   list(
     data = df,
     plot = p
@@ -767,574 +276,157 @@ plot_ari <- function(
 }
 
 
-
-
-
-# ============================================================
-# Spatial clustering plot
-# ============================================================
-
-
-#' Plot spatial clustering results
+#' Rank normalisation methods by overall clustering agreement
 #'
-#' Visualise predicted spatial clusters and ground-truth
-#' annotations across normalisation methods.
+#' Methods are ranked using the Overall score, calculated
+#' as the mean of NMI, HOM and COM.
 #'
-#' When show = "both", the ground truth is displayed once
-#' per spatial slice, followed by predicted cluster maps
-#' across all selected normalisation methods.
+#' @param metrics_df Data frame from calculate_clustering_metrics().
 #'
-#' Predicted clusters share one colour scale and legend.
-#' Ground truth uses a separate palette and legend.
-#'
-#' @param norm_list Named list of SpatialExperiment objects
-#'   or nested lists of SpatialExperiment objects.
-#' @param cluster_col Column containing predicted clusters.
-#' @param methods Optional normalisation methods to plot.
-#' @param method_order Optional method order.
-#' @param ground_truth_col Ground-truth annotation column.
-#' @param show One of "both", "predicted", or "truth".
-#' @param point_size Spatial point size.
-#' @param palette Optional named colours for predicted clusters.
-#' @param truth_palette Optional named colours for ground truth.
-#' @param ncol Number of columns for spatial facets.
-#' @param legend_point_size Point size in legends.
-#' @param theme_name Plot theme.
-#'
-#' @return List containing data, palettes, individual plots,
-#'   and combined plot.
-#'
+#' @return Data frame containing Rank, method and Overall.
 #' @export
-plot_spatial_clustering <- function(
-    norm_list,
-    cluster_col = "banksy_cluster",
-    methods = names(norm_list),
-    method_order = NULL,
-    point_size = 0.5,
-    palette = NULL,
-    ncol = 3,
-    legend_point_size = 4,
-    theme_name = "classic",
-    ground_truth_col = NULL,
-    show = c("predicted", "both", "truth"),
-    truth_palette = NULL
+rank_normalization_methods <- function(
+    metrics_df
 ) {
 
-  # ----------------------------------------------------------
   # Check input
-  # ----------------------------------------------------------
+  required <- c("method", "Overall")
 
-  .check_named_list(norm_list)
-
-  show <- match.arg(show)
-
-  if (
-    show %in% c("both", "truth") &&
-    is.null(ground_truth_col)
-  ) {
-    stop(
-      "ground_truth_col must be supplied when ",
-      "show = 'both' or 'truth'."
-    )
+  if (!all(required %in% names(metrics_df))) {
+    stop("Required columns missing from metrics_df.")
   }
 
-
-  # ----------------------------------------------------------
-  # Resolve methods
-  # ----------------------------------------------------------
-
-  missing_methods <- setdiff(
-    methods,
-    names(norm_list)
-  )
-
-  if (length(missing_methods) > 0) {
-    stop(
-      "Unknown normalisation methods: ",
-      paste(missing_methods, collapse = ", ")
-    )
+  if (anyDuplicated(metrics_df$method)) {
+    stop("Expected one row per normalisation method.")
   }
 
-  methods <- unique(methods)
-
-  if (!is.null(method_order)) {
-    methods <- c(
-      intersect(method_order, methods),
-      setdiff(methods, method_order)
-    )
+  if (anyNA(metrics_df$Overall)) {
+    stop("Overall scores cannot be missing.")
   }
 
-  if (length(methods) == 0) {
-    stop("No normalisation methods selected.")
+  # Rank methods
+  out <- metrics_df[
+    order(-metrics_df$Overall),
+    c("method", "Overall"),
+    drop = FALSE
+  ]
+
+  out$Rank <- seq_len(nrow(out))
+
+  out <- out[, c("Rank", "method", "Overall")]
+
+  rownames(out) <- NULL
+
+  # Return
+  out
+}
+
+
+#' Plot normalisation method ranking
+#'
+#' Display overall clustering agreement scores across
+#' normalisation methods.
+#'
+#' @param ranking_df Data frame from rank_normalization_methods().
+#' @param bar_width Bar width.
+#' @param palette Optional named colours for normalisation methods.
+#' @param label_size Numeric label size.
+#' @param show_values Whether to show score labels.
+#' @param theme_name One of "classic", "bw", "minimal", "gray".
+#'
+#' @return List containing data and ggplot object (`plot`).
+#' @export
+plot_normalization_ranking <- function(
+    ranking_df,
+    bar_width = 0.7,
+    palette = NULL,
+    label_size = 3.5,
+    show_values = TRUE,
+    theme_name = "classic"
+) {
+
+  # Check input
+  required <- c("method", "Overall")
+
+  if (!all(required %in% names(ranking_df))) {
+    stop("Required columns missing from ranking_df.")
   }
 
-
-  # ----------------------------------------------------------
-  # Extract spatial annotations
-  # ----------------------------------------------------------
-
-  df_list <- list()
-
-  for (method in methods) {
-
-    method_data <- norm_list[[method]]
-
-
-    # --------------------------------------------------------
-    # Single SPE or multiple slices
-    # --------------------------------------------------------
-
-    if (
-      methods::is(
-        method_data,
-        "SpatialExperiment"
-      )
-    ) {
-
-      spe_list <- list(
-        slice1 = method_data
-      )
-
-    } else if (is.list(method_data)) {
-
-      spe_list <- method_data
-
-      if (
-        is.null(names(spe_list)) ||
-        anyNA(names(spe_list)) ||
-        any(!nzchar(names(spe_list)))
-      ) {
-        stop(
-          "Slice lists must be named for method: ",
-          method
-        )
-      }
-
-    } else {
-
-      stop(
-        "Invalid input for method: ",
-        method
-      )
-    }
-
-
-    # --------------------------------------------------------
-    # Process each slice
-    # --------------------------------------------------------
-
-    for (slice_name in names(spe_list)) {
-
-      spe <- spe_list[[slice_name]]
-
-      if (
-        !methods::is(
-          spe,
-          "SpatialExperiment"
-        )
-      ) {
-        stop(
-          "Invalid SpatialExperiment for: ",
-          method,
-          " / ",
-          slice_name
-        )
-      }
-
-      cd <- SummarizedExperiment::colData(spe)
-
-
-      # ------------------------------------------------------
-      # Check required columns
-      # ------------------------------------------------------
-
-      if (
-        show %in% c("both", "predicted") &&
-        !cluster_col %in% colnames(cd)
-      ) {
-        stop(
-          "Cluster column '",
-          cluster_col,
-          "' not found for: ",
-          method
-        )
-      }
-
-      if (
-        show %in% c("both", "truth") &&
-        !ground_truth_col %in% colnames(cd)
-      ) {
-        stop(
-          "Ground-truth column '",
-          ground_truth_col,
-          "' not found for: ",
-          method
-        )
-      }
-
-
-      # ------------------------------------------------------
-      # Spatial coordinates
-      # ------------------------------------------------------
-
-      coords <- as.data.frame(
-        SpatialExperiment::spatialCoords(spe)
-      )
-
-      if (
-        ncol(coords) < 2 ||
-        nrow(coords) != ncol(spe)
-      ) {
-        stop(
-          "Invalid spatial coordinates for: ",
-          method,
-          " / ",
-          slice_name
-        )
-      }
-
-
-      # ------------------------------------------------------
-      # Construct plotting data
-      # ------------------------------------------------------
-
-      predicted <- if (
-        cluster_col %in% colnames(cd)
-      ) {
-        as.character(cd[[cluster_col]])
-      } else {
-        rep(NA_character_, ncol(spe))
-      }
-
-      truth <- if (
-        !is.null(ground_truth_col) &&
-        ground_truth_col %in% colnames(cd)
-      ) {
-        as.character(cd[[ground_truth_col]])
-      } else {
-        rep(NA_character_, ncol(spe))
-      }
-
-      df_list[[
-        paste(method, slice_name, sep = "_")
-      ]] <- data.frame(
-        x = coords[, 1],
-        y = coords[, 2],
-        method = method,
-        slice = slice_name,
-        predicted = predicted,
-        truth = truth,
-        stringsAsFactors = FALSE
-      )
-    }
-  }
-
-
-  # ----------------------------------------------------------
-  # Combine data
-  # ----------------------------------------------------------
-
-  df <- dplyr::bind_rows(df_list)
+  # Prepare plotting data
+  df <- ranking_df[
+    order(-ranking_df$Overall),
+    ,
+    drop = FALSE
+  ]
 
   df$method <- factor(
     df$method,
-    levels = methods
+    levels = rev(as.character(df$method))
   )
 
-  df$slice <- factor(
-    df$slice,
-    levels = unique(df$slice)
-  )
-
-
-  # ----------------------------------------------------------
-  # Resolve colour palettes
-  # ----------------------------------------------------------
-
-  make_palette <- function(values, supplied) {
-
-    levels_use <- sort(
-      unique(
-        values[
-          !is.na(values) & nzchar(values)
-        ]
-      )
+  # Plot
+  p <- ggplot2::ggplot(
+    df,
+    ggplot2::aes(
+      x = .data$Overall,
+      y = .data$method,
+      fill = .data$method
     )
+  ) +
 
-    n_levels <- length(levels_use)
-
-    if (n_levels == 0) {
-      return(character(0))
-    }
-
-    if (is.null(supplied)) {
-
-      if (n_levels > 36) {
-        stop(
-          "More than 36 categories detected. ",
-          "Please supply a custom palette."
-        )
-      }
-
-      supplied <- Polychrome::palette36.colors(
-        n_levels
-      )
-
-      names(supplied) <- levels_use
-
-    } else if (is.null(names(supplied))) {
-
-      if (length(supplied) < n_levels) {
-        stop("Not enough colours supplied.")
-      }
-
-      supplied <- supplied[seq_len(n_levels)]
-
-      names(supplied) <- levels_use
-
-    } else {
-
-      missing <- setdiff(
-        levels_use,
-        names(supplied)
-      )
-
-      if (length(missing) > 0) {
-        stop(
-          "Missing palette colours for: ",
-          paste(missing, collapse = ", ")
-        )
-      }
-
-      supplied <- supplied[levels_use]
-    }
-
-    supplied
-  }
-
-
-  # ----------------------------------------------------------
-  # Predicted cluster colours
-  # ----------------------------------------------------------
-
-  if (show %in% c("both", "predicted")) {
-
-    palette <- make_palette(
-      df$predicted,
-      palette
-    )
-
-  }
-
-
-  # ----------------------------------------------------------
-  # Ground-truth colours
-  # ----------------------------------------------------------
-
-  if (show %in% c("both", "truth")) {
-
-    truth_palette <- make_palette(
-      df$truth,
-      truth_palette
-    )
-
-  }
-
-
-  # ----------------------------------------------------------
-  # Common spatial plotting helper
-  # ----------------------------------------------------------
-
-  make_spatial_plot <- function(
-    data,
-    annotation_col,
-    colours,
-    legend_title
-  ) {
-
-    data$annotation <- factor(
-      data[[annotation_col]],
-      levels = names(colours)
-    )
-
-    ggplot2::ggplot(
-      data,
-      ggplot2::aes(
-        x = .data$x,
-        y = .data$y,
-        colour = .data$annotation
-      )
+    ggplot2::geom_col(
+      width = bar_width
     ) +
-      ggplot2::geom_point(
-        size = point_size
-      ) +
-      ggplot2::coord_fixed() +
-      ggplot2::scale_colour_manual(
-        values = colours,
-        na.value = "grey85",
-        drop = FALSE
-      ) +
-      ggplot2::labs(
-        x = "x",
-        y = "y",
-        colour = legend_title
-      ) +
-      .get_plot_theme(theme_name) +
-      ggplot2::theme(
-        panel.grid = ggplot2::element_blank(),
-        strip.background = ggplot2::element_blank(),
-        strip.text = ggplot2::element_text(
-          size = 9,
-          face = "bold"
+
+    ggplot2::coord_cartesian(
+      xlim = c(0, 1),
+      clip = "off"
+    ) +
+
+    ggplot2::labs(
+      x = "Overall clustering agreement score",
+      y = NULL,#"Normalisation method",
+      fill = "Method"
+    ) +
+
+    .get_plot_theme(theme_name) +
+
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      legend.position = "none"
+    )
+
+  # Optional colour palette
+  if (!is.null(palette)) {
+    p <- p +
+      ggplot2::scale_fill_manual(
+        values = palette
+      )
+  }
+
+  # Optional score labels
+  if (show_values) {
+
+    p <- p +
+
+      ggplot2::geom_text(
+        ggplot2::aes(
+          label = sprintf("%.3f", .data$Overall)
         ),
-        axis.text = ggplot2::element_text(
-          size = 8
-        ),
-        legend.position = "right"
+        hjust = -0.15,
+        size = label_size
       ) +
-      ggplot2::guides(
-        colour = ggplot2::guide_legend(
-          override.aes = list(
-            size = legend_point_size
-          )
+
+      ggplot2::scale_x_continuous(
+        expand = ggplot2::expansion(
+          mult = c(0, 0.12)
         )
       )
   }
 
-
-  # ----------------------------------------------------------
-  # Ground truth: one plot per slice
-  # ----------------------------------------------------------
-
-  p_truth <- NULL
-
-  if (show %in% c("both", "truth")) {
-
-    # Use the first selected method as the reference
-    # for each slice. Ground truth is not repeated
-    # across normalisation methods.
-
-    truth_df <- df[
-      as.character(df$method) == methods[1],
-      ,
-      drop = FALSE
-    ]
-
-    if (nrow(truth_df) == 0) {
-      stop("Ground-truth data could not be extracted.")
-    }
-
-    p_truth <- make_spatial_plot(
-      data = truth_df,
-      annotation_col = "truth",
-      colours = truth_palette,
-      legend_title = "Ground truth"
-    )
-
-    if (length(unique(truth_df$slice)) > 1) {
-
-      p_truth <- p_truth +
-        ggplot2::facet_wrap(
-          ~ slice,
-          ncol = ncol
-        )
-    }
-
-    p_truth <- p_truth +
-      ggplot2::labs(
-        title = "Ground truth"
-      ) +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(
-          hjust = 0.5,
-          face = "bold"
-        )
-      )
-  }
-
-
-  # ----------------------------------------------------------
-  # Predicted clusters: all selected methods
-  # ----------------------------------------------------------
-
-  p_predicted <- NULL
-
-  if (show %in% c("both", "predicted")) {
-
-    p_predicted <- make_spatial_plot(
-      data = df,
-      annotation_col = "predicted",
-      colours = palette,
-      legend_title = "BANKSY cluster"
-    )
-
-    if (length(unique(df$slice)) > 1) {
-
-      p_predicted <- p_predicted +
-        ggplot2::facet_grid(
-          method ~ slice
-        )
-
-    } else {
-
-      p_predicted <- p_predicted +
-        ggplot2::facet_wrap(
-          ~ method,
-          ncol = ncol
-        )
-    }
-
-    p_predicted <- p_predicted +
-      ggplot2::labs(
-        title = "BANKSY clustering"
-      ) +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(
-          hjust = 0.5,
-          face = "bold"
-        )
-      )
-  }
-
-
-  # ----------------------------------------------------------
-  # Combine ground truth and predicted clusters
-  # ----------------------------------------------------------
-
-  if (show == "both") {
-
-    combined_plot <- patchwork::wrap_plots(
-      p_truth,
-      p_predicted,
-      ncol = 1,
-      heights = c(1, 2)
-    )
-
-  } else if (show == "truth") {
-
-    combined_plot <- p_truth
-
-  } else {
-
-    combined_plot <- p_predicted
-
-  }
-
-
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
-
-  return(
-    list(
-      data = df,
-      palette = palette,
-      truth_palette = truth_palette,
-      plots = list(
-        truth = p_truth,
-        predicted = p_predicted
-      ),
-      plot = combined_plot
-    )
+  list(
+    data = df,
+    plot = p
   )
 }

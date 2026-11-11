@@ -17,7 +17,8 @@ run_ccc(
   trim = 0.1,
   scale_distance = 0.1,
   variable_both = FALSE,
-  verbose = TRUE
+  verbose = TRUE,
+  ...
 )
 }
 \arguments{
@@ -51,6 +52,8 @@ Default is "logcounts".}
 identifyOverExpressedInteractions().}
 
 \item{verbose}{Logical. Print progress messages.}
+
+\item{...}{Additional arguments.}
 }
 \value{
 Named list containing CellChat results for each method.

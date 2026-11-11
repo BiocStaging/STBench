@@ -26,13 +26,15 @@ order of normalisation methods.}
 
 \item{point_size}{Point size for spatial locations.}
 
-\item{palette}{Optional named character vector specifying
-colours for cell types.}
+\item{palette}{Colour palette. One of "viridis", "magma",
+"inferno", "plasma", "cividis", "rocket", "mako",
+"turbo", or a custom character vector of colours.
+If NULL, the default ggplot2 palette is used.}
 
 \item{ncol}{Number of facet columns.}
 
-\item{theme_name}{Plot theme. One of `"classic"`, `"bw"`,
-`"minimal"`, or `"gray"`.}
+\item{theme_name}{Plot theme. One of "classic", "bw",
+"minimal", or "gray".}
 }
 \value{
 A list containing plotting data and plot.

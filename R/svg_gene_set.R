@@ -1,6 +1,6 @@
-# ============================================================
+
 # SVG gene-set analyses
-# ============================================================
+
 
 
 #' Extract SVG statistics for a gene set
@@ -224,7 +224,7 @@ plot_svg_gene_set_distribution <- function(
 
   p <- p +
     ggplot2::labs(
-      x = "Normalisation method",
+      x = NULL,#"Normalisation method",
       y = y_lab
     ) +
     .get_plot_theme(
@@ -258,9 +258,9 @@ plot_svg_gene_set_distribution <- function(
 
 
 
-# ============================================================
+
 # SVG gene-set proportion among top-ranked genes
-# ============================================================
+
 
 
 #' Proportion of a gene set among top-ranked SVGs
@@ -514,11 +514,11 @@ plot_svg_topn_gene_set <- function(
       breaks = top_n
     ) +
     ggplot2::labs(
-      title = title,
+      title = NULL,#title,
       subtitle = subtitle,
       x = "Top N SVGs",
       y = y_label,
-      colour = "Normalisation method"
+      colour = "Method"
     ) +
     .get_plot_theme(
       theme_name
@@ -582,9 +582,9 @@ plot_svg_topn_gene_set <- function(
 
 
 
-# ============================================================
+
 # SVG comparison across multiple gene sets
-# ============================================================
+
 
 
 #' Compare SVG statistics across multiple gene sets
