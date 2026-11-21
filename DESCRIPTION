@@ -58,6 +58,8 @@ Suggests:
     clevr,
     org.Mm.eg.db,
     presto
+Remotes:
+    jinworks/CellChat
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr
 biocViews: Spatial, GeneExpression, Normalization,
