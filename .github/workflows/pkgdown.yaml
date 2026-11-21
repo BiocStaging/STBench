@@ -47,6 +47,7 @@ jobs:
             bioc::org.Mm.eg.db
             cran::clevr
             cran::aricode
+            bioc::sparseMatrixStats
             github::jinworks/CellChat
             github::immunogenomics/presto
           dependencies: '"hard"'
