@@ -1,3 +1,4 @@
+
 url: https://lahiru-lsb.github.io/STBench/
 
 template:
@@ -6,3 +7,12 @@ template:
   bslib:
     primary: "#2471A3"
     navbar-bg: "#154360"
+
+articles:
+  - title: "STBench Tutorials"
+    navbar: ~
+    contents:
+      - getting-started
+      - svg-analysis
+      - annotation-and-clustering
+      - biological-interpretation
