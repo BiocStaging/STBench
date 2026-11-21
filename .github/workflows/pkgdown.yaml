@@ -41,9 +41,35 @@ jobs:
             any::pkgdown
             local::.
             github::jinworks/CellChat
+            github::immunogenomics/presto
             bioc::Banksy
+            cran::aricode
+            cran::clevr
+            bioc::org.Mm.eg.db
+            bioc::sparseMatrixStats
           dependencies: '"hard"'
           needs: website
+
+      - name: Verify optional packages
+        shell: Rscript {0}
+        run: |
+          packages <- c(
+            "CellChat",
+            "presto",
+            "Banksy",
+            "aricode",
+            "clevr",
+            "org.Mm.eg.db",
+            "sparseMatrixStats"
+          )
+
+          for (pkg in packages) {
+            cat(
+              pkg, ":",
+              requireNamespace(pkg, quietly = TRUE),
+              "\n"
+            )
+          }
 
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
