@@ -38,3 +38,30 @@ of spots and genes that would be removed.
 \details{
 No filtering is performed by this function.
 }
+\examples{
+data(spe_example)
+
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+ls <- c(100, 200)
+gc <- c(20, 50)
+
+p <- lapply(seq_len(2), function(i) {
+  p_cutoffs <- plot_qc_cutoffs(
+    spe_qc,
+    library_cutoff = ls[i],
+    gene_cutoff = gc[i],
+    n_points = 200,
+    theme_name = "classic"
+  )
+
+  p_cutoffs$plot
+})
+
+patchwork::wrap_plots(p, ncol = 1) +
+  patchwork::plot_annotation(tag_levels = "A")
+}

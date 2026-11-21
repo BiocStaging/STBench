@@ -43,3 +43,15 @@ A list containing plotting data and plot.
 Plot cell-type annotations stored in the colData of
 SpatialExperiment objects across normalisation methods.
 }
+\examples{
+data(norm_example)
+
+p <- plot_spatial_annotation(
+  norm_list = norm_example,
+  annotation_col = "cell_type",
+  point_size = 0.5,
+  theme_name = "classic"
+)
+
+p$plot
+}

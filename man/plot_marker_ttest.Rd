@@ -54,3 +54,30 @@ Performs Welch's two-sample t-test for selected marker
 genes, comparing expression in the specified cell group
 against all other cells across normalisation methods.
 }
+\examples{
+data(norm_example)
+
+genes <- head(rownames(norm_example[[1]]), 3)
+
+region <- as.character(
+  SummarizedExperiment::colData(norm_example[[1]])$cell_type
+)
+
+marker_labels <- rep(
+  names(sort(table(region), decreasing = TRUE))[1],
+  length(genes)
+)
+
+p_marker <- plot_marker_ttest(
+  norm = norm_example,
+  genes = genes,
+  marker_labels = marker_labels,
+  region_col = "cell_type",
+  assay_name = "logcounts",
+  scales = "free_y",
+  ncol = 3,
+  theme_name = "bw"
+)
+
+p_marker$plot
+}

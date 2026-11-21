@@ -65,3 +65,20 @@ A list containing plotting data and ggplot.
 Compare marker-gene expression distributions across
 selected cell types and normalisation methods.
 }
+\examples{
+data(norm_example)
+
+markers <- head(
+  rownames(norm_example[[1]]),
+  2
+)
+
+p <- plot_marker_expression(
+  norm_list = norm_example,
+  annotation_col = "cell_type",
+  markers = markers,
+  palette = "turbo"
+)
+
+p$plot
+}

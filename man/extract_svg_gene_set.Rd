@@ -29,3 +29,18 @@ Data frame.
 \description{
 Extract SVG statistics for a gene set
 }
+\examples{
+data(svg_example)
+
+genes <- head(rownames(svg_example[[1]]), 5)
+
+svg_df <- extract_svg_gene_set(
+  svg_norm = svg_example,
+  genes = genes,
+  stat = "LR_stat",
+  gene_id = "rownames",
+  method_order = names(svg_example)
+)
+
+head(svg_df)
+}

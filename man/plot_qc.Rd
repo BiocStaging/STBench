@@ -29,3 +29,21 @@ QC metrics stored in a SpatialExperiment object.
 \details{
 The function can be used before or after filtering.
 }
+\examples{
+data(spe_example)
+
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc <- plot_qc(
+  spe_qc,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+
+p_qc$plot
+}

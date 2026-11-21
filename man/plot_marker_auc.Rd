@@ -48,3 +48,38 @@ List containing AUC summary data and ggplot.
 Calculate ROC AUC for marker genes across
 normalisation methods using target cell-type labels.
 }
+\examples{
+data(norm_example)
+
+spe <- norm_example[[1]]
+
+labels <- as.character(
+  SummarizedExperiment::colData(spe)$cell_type
+)
+
+label_counts <- sort(
+  table(labels),
+  decreasing = TRUE
+)
+
+target_label <- names(label_counts)[1]
+
+markers <- head(rownames(spe), 2)
+
+target_types <- stats::setNames(
+  rep(target_label, length(markers)),
+  markers
+)
+
+p <- plot_marker_auc(
+  norm_list = norm_example,
+  markers = markers,
+  target_types = target_types,
+  annotation_col = "cell_type",
+  reference_method = "None",
+  palette = "magma",
+  point_size = 3
+)
+
+p$plot
+}

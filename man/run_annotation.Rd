@@ -48,3 +48,28 @@ Predicted labels are added to the colData of each
 SpatialExperiment object so that the same objects can be used
 in downstream plotting and benchmarking functions.
 }
+\examples{
+data(norm_example)
+
+# Use a subset of cells as an illustrative reference
+ref <- norm_example$None[, seq_len(100)]
+labels <- as.character(ref$cell_type)
+
+# Annotate the remaining cells
+query <- lapply(
+  norm_example,
+  function(spe) spe[, seq.int(101, ncol(spe))]
+)
+
+annotated_norm <- run_annotation(
+  norm_list = query,
+  ref = ref,
+  labels = labels,
+  method = "SingleR",
+  label_name = "SingleR_label",
+  pruned_label_name = "SingleR_pruned_label",
+  de.method = "classic"
+)
+
+table(annotated_norm$None$SingleR_label)
+}

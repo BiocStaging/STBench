@@ -1,6 +1,4 @@
-
 # Normalisation runner
-
 
 
 #' Apply multiple normalisation methods
@@ -12,26 +10,32 @@
 #' @return A named list of normalised objects.
 #'
 #' @examples
-#' \dontrun{
+#' data(spe_example)
+#'
 #' norm <- normalize_spe(
-#'   spe,
-#'   methods = c("none", "scran")
+#'   spe_example,
+#'   methods = c("None", "SpaNorm"),
+#'   params = list(
+#'     spanorm = list(
+#'       sample_p = 0.15,
+#'       df_tps = 6,
+#'       adj_method = "logpac"
+#'     )
+#'   )
 #' )
-#' }
 #'
 #' @export
 normalize_spe <- function(
-    spe,
-    methods = c(
-      "none",
-      "scran",
-      "sct",
-      "spanorm",
-      "giotto"
-    ),
-    params = list()
+  spe,
+  methods = c(
+    "none",
+    "scran",
+    "sct",
+    "spanorm",
+    "giotto"
+  ),
+  params = list()
 ) {
-
   norm_functions <- list(
     None = norm_none,
     scran = norm_scran,
@@ -46,7 +50,6 @@ normalize_spe <- function(
   )
 
   if (length(unknown_methods) > 0) {
-
     stop(
       "Unknown normalisation method(s): ",
       paste(
@@ -59,7 +62,6 @@ normalize_spe <- function(
   out <- lapply(
     methods,
     function(method) {
-
       fun <- norm_functions[[method]]
 
       method_params <- params[[method]]

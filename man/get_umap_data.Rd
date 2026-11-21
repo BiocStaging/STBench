@@ -42,3 +42,16 @@ method using the same sampled spots and common genes.
 All colData annotations from the reference object are
 retained for subsequent plotting.
 }
+\examples{
+data(norm_example)
+
+umap_data <- get_umap_data(
+  norm_example,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
+)
+}

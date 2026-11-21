@@ -1,0 +1,1295 @@
+---
+title: "Benchmarking normalisation methods with STBench"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Benchmarking normalisation methods with STBench}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Introduction
+
+STBench is an R package for comparing normalisation methods in spatial transcriptomics. This vignette demonstrates quality control, normalisation, spatially variable gene (SVG) analysis, cell-type annotation, spatial clustering, and Gene Ontology (GO) enrichment using a human dorsolateral prefrontal cortex (DLPFC) Visium sample.
+
+The same spatial sample is analysed with multiple normalisation methods. We then compare the biological patterns and downstream results produced by each method.
+
+> **Development note:** This vignette currently uses a DLPFC `SpatialExperiment` object stored on the author's HPC. It is suitable for testing in that environment, but **the data-loading step must be replaced with a publicly accessible example before the vignette can be reproduced by other users or built on a public CI service**. Some analyses (particularly nnSVG, SingleR and BANKSY) may take time.
+
+# 1. Load packages and data
+
+We load STBench and the packages required to retrieve the single-nucleus RNA-seq reference and analyse the human DLPFC spatial sample. The reference is later used for SingleR annotation.
+
+```{r load-data, include=FALSE}
+# library(STBench)
+# library(spatialLIBD)
+# library(HDF5Array)
+library(Seurat)
+library(SpatialExperiment)
+library(patchwork)
+library(scran)
+
+# ref_zip <- spatialLIBD::fetch_data(
+#   type = "spatialDLPFC_snRNAseq"
+# )
+# 
+# ref_dir <- tempfile()
+# dir.create(ref_dir)
+# unzip(ref_zip, exdir = ref_dir)
+# 
+# ref <- HDF5Array::loadHDF5SummarizedExperiment(
+#   file.path(ref_dir, "sce_DLPFC_annotated")
+# )
+# 
+# # Local development dataset: replace this path for a public vignette.
+donor1 <- readRDS(
+  "/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/normalized_all/donor1.rds"
+)
+spe <- donor1$None$`151507`
+
+load("/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/MoreData/Housekeeping_Genes_Mouse.RData")
+ref <- readRDS("/data/gpfs/projects/punim2131/3DSpaNorm/Basic_analysis/CTannot/mouseref.rds")
+ref <- as.SingleCellExperiment(ref)
+ref <- logNormCounts(ref)
+wtp0 <- readRDS("/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/normalized_all/wtp0.rds")
+wtp0G <- readRDS("/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/normalized_all/wtp0giottoscaled.rds")
+wtp0[["Giotto"]] = wtp0G[["Giotto"]]
+wtp0[["SpaNorm_scaled"]]=NULL
+ctwtp0 <- readRDS("/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/ct_annotations/WTP0.rds")
+
+for (nm in names(wtp0)) {
+  sub=wtp0[[nm]]
+  for (slice in names(sub)) {
+    spe=sub[[slice]]
+    ct=ctwtp0[[nm]][[slice]]
+    idx <- match(
+      colnames(spe),
+      rownames(ct)
+    )
+    
+    spe$cell_type=ct$SingleR_label#[idx]
+    wtp0[[nm]][[slice]]=spe
+  }
+}
+
+newniche1 <- readRDS("/data/gpfs/projects/punim2131/3DStereoSeq/dataSets/benchmarking_data/niche_compositions/wtp0case1.rds")
+
+data1=wtp0
+for (meth in names(data1)) {
+  for (nm in names(data1[[meth]])) {
+    
+    #idx <- match(colnames(data[[meth]][[nm]]), newniche[[nm]]$cell_id)
+    #idx <- match(colnames(data1[[meth]][[nm]]), gsub("cell_","",newniche[[nm]]$cell_id))
+    colData(data1[[meth]][[nm]])$niche <- newniche1[[nm]]$niche
+  }
+}
+
+
+wtp0=data1
+
+```
+
+
+# 2. Quality control
+
+## 2.1 Calculate and visualise QC metrics
+
+We first calculate spot-level metrics, including library size, detected genes and mitochondrial fraction, together with gene-level expression summaries. We inspect their distributions before filtering.
+
+```{r qc-initial, fig.height=7}
+spe <- add_qcs(
+  spe,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc <- plot_qc(
+  spe,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+p_qc$plot
+```
+
+## 2.2 Explore filtering thresholds
+
+First, we examine the relationship between possible cutoffs and the proportions of spots and genes removed, without performing any filtering. Then we display the selected illustrative thresholds: **6.5** for log library size and **0.25** for log mean gene expression.
+
+```{r qc-cutoffs-explore}
+ls <- c(6.3, 6.4)
+gc <- c(0.2, 0.4)
+
+p <- lapply(seq_len(2), function(i) {
+  p_cutoffs <- plot_qc_cutoffs(
+    spe,
+    library_cutoff = ls[i],
+    gene_cutoff = gc[i],
+    n_points = 200,
+    theme_name = "classic"
+  )
+
+  p_cutoffs$plot
+})
+
+wrap_plots(p, ncol = 1) +
+  plot_annotation(tag_levels = "A")
+```
+
+```{r qc-cutoffs-selected}
+p_cutoffs <- plot_qc_cutoffs(
+  spe,
+  library_cutoff = 6.5,
+  gene_cutoff = 0.2,
+  n_points = 200,
+  theme_name = "classic"
+)
+p_cutoffs$plot
+
+p <- plot_qc_removed_spots(
+    spe,
+    spe_filtered,
+    point_size = 0.8,
+    theme_name = "classic"
+)
+
+p
+
+(p_cutoffs$plot+p)+plot_annotation(tag_levels = "A")
+```
+
+## 2.3 Apply filtering and reassess QC
+
+We remove spots and genes below the selected thresholds. The QC metrics are recalculated for the retained observations.
+
+```{r qc-filter, fig.height=7}
+spe_filtered <- filter_qc(
+  spe,
+  library_cutoff = 6.5,
+  gene_cutoff = 0.2,
+  recalculate = TRUE,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc_filtered <- plot_qc(
+  spe_filtered,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+p_qc_filtered$plot
+```
+
+# 3. Apply normalisation methods
+
+We apply five normalisation approaches to the same filtered sample. The `None` method provides a log1p-transformed baseline. Method-specific arguments are supplied through `params`.
+
+```{r normalisation}
+norm <- normalize_spe(
+  spe_filtered,
+  methods = c(
+    "None",
+    "scran",
+    "sctransform",
+    "SpaNorm",
+    "Giotto"
+  ),
+  params = list(
+    sctransform = list(
+      seed = 123,
+      vst_flavor = "v2",
+      verbosity = 1
+    ),
+    spanorm = list(
+      sample_p = 0.15,
+      df_tps = 6,
+      adj_method = "logpac",
+      seed = 123
+    )
+  )
+)
+
+saveRDS(norm,"/data/gpfs/projects/punim2131/Datasets/stBench/wtp0norm.rds")
+```
+
+# 4. Compare normalised library sizes
+
+We compare summed normalised expression across spots using the methods supported by this diagnostic. By default, the function excludes sctransform and Giotto because their transformed assays are not interpreted as standard log1p-normalised values.
+
+```{r library-size, fig.height=7}
+p_ls <- plot_library_size_comparison(
+  norm,
+  methods = NULL,
+  assay_name = "logcounts",
+  point_size = 0.5,
+  theme_name = "classic"
+)
+p_ls$plot
+p_ls$boxplot/p_ls$spatial+plot_annotation(tag_levels = "A")
+```
+
+# 5. UMAP visualisation
+
+We run PCA and UMAP independently for each normalisation method and use the resulting coordinates to inspect the distribution of manually annotated cortical layers. All available spot annotations are retained for plotting.
+
+```{r umap-calculate}
+umap_data <- get_umap_data(
+  norm,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
+)
+```
+
+```{r umap-layers, fig.height=6}
+p_umap_layer <- plot_umap_comparison(
+  umap_data,
+  colour_by = "cell_type",
+  point_size = 0.58,
+  alpha = 0.6,
+  ncol = 3,
+  theme_name = "classic"
+)
+p_umap_layer$plot
+```
+
+# 6. Spatially variable gene analysis
+
+## 6.1 Detect SVGs using nnSVG
+
+We use the same SVG detection procedure for each normalised dataset to examine how normalisation affects spatial variability statistics and gene rankings.
+
+```{r svg-detection}
+svg_norm <- run_svg(
+  norm_list = norm,
+  method = "nnSVG",
+  n_threads = 4,
+  verbose = FALSE
+)
+
+names(svg_norm)
+
+head(as.data.frame(
+  SummarizedExperiment::rowData(svg_norm$scran)
+))
+
+saveRDS(
+  svg_norm,
+  "/data/gpfs/projects/punim2131/Datasets/stBench/wtp0normSVG.rds"
+)
+```
+
+## 6.2 Evaluate biologically relevant marker genes
+
+We use seven cardiac marker genes from the WTP0 dataset to investigate how normalisation affects the detection of biologically meaningful spatial expression patterns.
+
+```{r svg-marker-genes}
+marker_genes <- c(
+  "Myl2", "Myl7", "Myh7",
+  "Nppa", "Sln", "Pln", "Myl3"
+)
+
+# Verify that selected genes are present.
+intersect(marker_genes, rownames(svg_norm$scran))
+```
+
+### 6.2.1 Compare SVG statistics
+
+We first compare the likelihood-ratio (LR) statistics of the selected marker genes across normalisation methods. Higher LR statistics indicate stronger statistical evidence of spatial variation.
+
+```{r svg-marker-stat, fig.height=6}
+p_svg_markers <- plot_svg_stat(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  transform = "log",
+  point_size = 4,
+  gene_id = "rownames",
+  theme_name = "bw"
+)
+
+p_svg_markers$plot
+```
+
+### 6.2.2 Compare SVG rankings
+
+We then compare the SVG rankings of the same marker genes across normalisation methods. Smaller ranks indicate higher relative priority in SVG detection.
+
+```{r svg-marker-rank, fig.height=6}
+p_svg_rank <- plot_svg_rank(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  method_order = NULL,
+  method_colors = NULL,
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "bw"
+)
+
+p_svg_rank$plot
+```
+
+### 6.2.3 Investigate SVG ranks against LR statistics
+
+To examine both the relative ranking and statistical evidence of spatial variation simultaneously, we visualise SVG ranks against LR statistics for each selected marker gene.
+
+```{r svg-rank-vs-stat, fig.height=6}
+p <- plot_svg_rank_vs_stat(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  stat = "LR_stat",
+  transform = "log",
+  scales = "free",
+  ncol = 3,
+  point_size = 3,
+  theme_name = "bw"
+)
+
+p$plot
+```
+
+### 6.2.4 Compare overall marker gene SVG statistics
+
+In addition to examining individual genes, we compare the overall distribution of SVG statistics across the selected marker genes for each normalisation method.
+
+```{r svg-marker-distribution, fig.height=6}
+p_svg_mk <- plot_svg_gene_set_distribution(
+  svg_norm = svg_norm,
+  genes = marker_genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = "log",
+  plot_type = "boxplot",
+  add_jitter = TRUE,
+  point_size = 1.5,
+  alpha = 1,
+  theme_name = "bw"
+)
+
+p_svg_mk$plot
+```
+
+## 6.3 Evaluate SVG ranking consistency
+
+Beyond individual marker genes, we investigate the consistency of SVG rankings across normalisation methods using Spearman's rank correlation.
+
+Correlations are calculated using genes shared across the selected methods. Higher correlations indicate greater similarity in SVG rankings between methods.
+
+```{r svg-rank-correlation, fig.height=6}
+result <- plot_svg_rank_correlation(
+  svg_norm = svg_norm,
+  show_values = TRUE,
+  digits = 2,
+  theme_name = "classic"
+)
+
+result$plot
+```
+
+## 6.4 Investigate housekeeping gene behaviour
+
+Housekeeping genes are generally expected to exhibit relatively stable expression. Therefore, examining their SVG statistics can provide insights into potentially unwanted spatial variation remaining after normalisation.
+
+However, housekeeping genes are not necessarily spatially uniform, and their behaviour should be interpreted in the context of the tissue.
+
+### 6.4.1 Define housekeeping genes
+
+```{r svg-housekeeping-genes}
+housekeeping_genes <- Mouse_HK_genes$Gene
+
+housekeeping_genes <- as.character(
+  housekeeping_genes
+)
+```
+
+### 6.4.2 Examine SVG statistics for housekeeping genes
+
+We first investigate the distribution of SVG statistics among housekeeping genes across normalisation methods.
+
+```{r svg-housekeeping-distribution, fig.height=5}
+p_svg_hk <- plot_svg_gene_set_distribution(
+  svg_norm = svg_norm,
+  genes = housekeeping_genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = "log",
+  plot_type = "boxplot",
+  add_jitter = TRUE,
+  point_size = 1.5,
+  alpha = 1,
+  theme_name = "classic"
+)
+
+p_svg_hk$plot
+```
+
+### 6.4.3 Examine housekeeping genes among top-ranked SVGs
+
+We further investigate the proportion of housekeeping genes among the top 50, 100, 200, and 300 ranked SVGs.
+
+A relatively high proportion of housekeeping genes among top-ranked SVGs may indicate unwanted spatial variation, although genuine biological spatial expression should also be considered.
+
+```{r svg-housekeeping-topn, fig.height=5}
+p_svg_topn <- plot_svg_topn_gene_set(
+  svg_norm = svg_norm,
+  genes = housekeeping_genes,
+  top_n = c(50, 100, 200, 300),
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  theme_name = "bw",
+  gene_set_name = "HK gene"
+)
+
+p_svg_topn$plot
+```
+
+## 6.5 Compare SVG statistics between gene sets
+
+Finally, we compare the distribution of SVG statistics between different gene sets to investigate how normalisation affects spatial variability across gene groups.
+
+For demonstration purposes, we compare housekeeping genes with all other genes. The package also allows users to define their own gene sets for comparison.
+
+```{r svg-gene-sets, fig.height=6}
+housekeeping_genes <- as.character(housekeeping_genes)
+
+gene_sets <- list(
+  "Housekeeping genes" = housekeeping_genes,
+  "Other genes" = setdiff(
+    rownames(svg_norm$None),
+    housekeeping_genes
+  )
+)
+
+p_svg_sets <- plot_svg_gene_sets(
+  svg_norm = svg_norm,
+  gene_sets = gene_sets,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = "log",
+  plot_type = "boxplot",
+  scales = "free_y",
+  facet_ncol = 3,
+  add_jitter = FALSE,
+  point_size = 1,
+  alpha = 0.65,
+  jitter_alpha = 0.5,
+  box_width = 0.65,
+  title = NULL,
+  subtitle = NULL,
+  x_label = NULL,
+  y_label = "Log LR statistic",
+  show_legend = FALSE,
+  theme_name = "bw"
+)
+
+p_svg_sets$plot
+```
+
+## 6.6 T test
+```{r svg-marker-ttest}
+marker_genes <- c(
+  "Myl2", "Myl7", "Myh7",
+  "Nppa", "Sln", "Pln", "Myl3"
+)
+
+marker_labels <- c(
+  "ventricular_cm",  # Myl2
+  "atrial_cm",        # Myl7
+  "ventricular_cm",  # Myh7
+  "atrial_cm",        # Nppa
+  "atrial_cm",        # Sln
+  "ventricular_cm",  # Pln
+  "ventricular_cm"   # Myl3
+)
+
+resultmk <- plot_marker_ttest(
+  norm = annotated_norm,
+  genes = marker_genes,
+  marker_labels = marker_labels,
+  region_col = "cell_type",
+  assay_name = "logcounts",
+  scales = "free_y",
+  ncol = 3,
+  theme_name = "bw"
+)
+
+(p$plot+p_svg_mk$plot+result$plot)/(p_svg_sets$plot+p_svg_topn$plot+resultmk$plot)
+```
+
+
+# 7. Spatial expression of marker genes
+
+We visualise selected DLPFC markers across normalisation methods. In the scaled plot, expression is rescaled to the interval from 0 to 1 for each gene across the selected methods. We can also plot the unscaled assay values; their numerical scales may not be directly comparable for methods that return different kinds of transformed expression.
+
+```{r spatial-expression-scaled, fig.height=8}
+# spatial_markers <- c(
+#   "MBP", "MOBP", "PCP4", "GFAP", "SLC17A7", "GAD1"
+# )
+
+p_marker_maps <- plot_spatial_expression(
+  norm_list = svg_norm,
+  genes = marker_genes,
+  methods = c("None", "scran", "SpaNorm"),
+  assay_name = "logcounts",
+  method_order = NULL,
+  scale_expr = TRUE,
+  scale_by = "gene",
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic"
+)
+p_marker_maps$plot
+```
+
+```{r spatial-expression-unscaled, fig.height=8}
+p_spatial_unscaled <- plot_spatial_expression(
+  norm_list = norm,
+  genes = spatial_markers,
+  assay_name = "logcounts",
+  method_order = NULL,
+  scale_expr = FALSE,
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic"
+)
+p_spatial_unscaled$plot
+```
+
+# 8. Cell-type annotation with SingleR
+
+We annotate each normalised spatial dataset using the same DLPFC single-nucleus RNA-seq reference. The reference cell-type labels are read from `cellType_broad_hc`, as in the current testing script. This code retains the original `de.method = "classic"` setting.
+
+```{r singler-annotation}
+annotated_norm <- run_annotation(
+  norm_list = norm,
+  ref = ref,
+  labels = as.character(ref$cell_type_spec),
+  method = "SingleR",
+  label_name = "SingleR_label",
+  pruned_label_name = "SingleR_pruned_label",
+  de.method = "classic"
+  # BPPARAM = BiocParallel::SnowParam(
+  #   workers = 1,
+  #   progressbar = FALSE
+  # )
+)
+
+#saveRDS(annotated_norm,"/data/gpfs/projects/punim2131/Datasets/stBench/wtp0norm_ct.rds")
+```
+
+Before comparing annotations, we confirm that the spatial spot identifiers appear in the same order across all normalisation methods.
+
+```{r singler-spot-check}
+stopifnot(
+  all(vapply(
+    annotated_norm,
+    function(spe) {
+      identical(
+        colnames(spe),
+        colnames(annotated_norm[[1]])
+      )
+    },
+    logical(1)
+  ))
+)
+```
+
+## 8.1 Visualise spatial cell-type assignments
+
+We compare the spatial distributions of predicted cell types and the pruned SingleR labels. Pruned labels can include missing assignments where confidence was insufficient.
+
+```{r singler-maps, fig.height=7}
+p_annotation <- plot_spatial_annotation(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  point_size = 0.5,
+   ncol = 3,
+  theme_name = "classic",
+  palette='turbo'
+)
+p_annotation$plot
+```
+
+```{r singler-pruned-maps, fig.height=7}
+p_annotation_pruned <- plot_spatial_annotation(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_pruned_label",
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  ncol = 3,
+  theme_name = "classic"
+)
+p_annotation_pruned$plot
+```
+
+## 8.2 Compare predicted cell-type composition
+
+We examine relative proportions and absolute spot counts assigned to each predicted cell type.
+
+```{r singler-proportions, fig.height=6}
+
+p_celltype_prop <- plot_celltype_proportion(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  palette = 'turbo',
+  show = "proportion",
+  theme_name = "classic"
+)
+p_celltype_prop$plot
+```
+
+```{r singler-counts, fig.height=6}
+p_celltype_count <- plot_celltype_proportion(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  palette = NULL,
+  show = "count",
+  theme_name = "classic"
+)
+p_celltype_count$plot
+```
+
+## 8.3 Calculate and plot annotation agreement
+
+Pairwise agreement measures the fraction of spatial spots receiving the same predicted cell-type label under two normalisation methods. This is a measure of consistency between methods, rather than accuracy against a known spot-level cell-type ground truth.
+
+```{r singler-agreement, fig.height=6}
+annotation_agreement <- calculate_annotation_agreement(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE
+)
+annotation_agreement
+
+p_agreement <- plot_annotation_agreement(
+  norm_list = annotated_norm,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE,
+  show_values = TRUE,
+  digits = 2,
+  colour_option = "viridis",
+  theme_name = "classic"
+)
+p_agreement$plot
+p_annotation$plot/(p_celltype_prop$plot+p_agreement$plot)+plot_annotation(tag_levels = "A")
+```
+
+## 8.4 Marker Investigations
+
+```{r}
+result <- plot_marker_expression(
+  norm_list = annotated_norm,
+  markers = c("Nppa", "Myl7"),
+ # cell_types = c("atrial_cm", "ventricular_cm"),
+  palette = "turbo"
+)
+
+markers <- c("Nppa", "Myl7")
+
+target_types <- c(
+  Myl7 = "atrial_cm",
+  Nppa = "atrial_cm"
+)
+
+auc_result <- plot_marker_auc(
+  norm_list = annotated_norm,
+  markers = markers,
+  target_types = target_types,
+  annotation_col = "SingleR_label",
+  reference_method = "None",
+  palette = "magma",
+  point_size = 3
+)
+
+auc_result$plot
+#auc_result$data
+
+result$plot/auc_result$plot+plot_annotation(tag_levels = "A")
+```
+
+
+# 9. BANKSY spatial clustering
+
+We use BANKSY with the same parameter settings for each normalised dataset. Spatial neighbourhood information is incorporated alongside gene expression to identify spatial domains.
+
+```{r banksy-clustering}
+banksy_norm <- run_banksy_individual(
+  norm_list = norm,
+  methods = names(norm),
+  assay_name = "logcounts",
+  cluster_col = "banksy_cluster",
+  k_geom = 15,
+  lambda = 0.8,
+  resolution = 0.2,
+  seed = 123
+)
+
+names(banksy_norm)
+head(SummarizedExperiment::colData(banksy_norm$scran))
+table(banksy_norm$scran$banksy_cluster)
+```
+
+## 9.1 Compare predicted domains with cortical layers
+
+We show the manual cortical layer annotation once and the predicted BANKSY clusters for each normalisation method. Cluster numbers are method-specific labels, so the same number across methods does not necessarily indicate the same biological domain.
+
+```{r banksy-maps, fig.height=10}
+p_banksy <- plot_spatial_clustering(
+  norm_list = banksy_norm,
+  cluster_col = "banksy_cluster",
+  ground_truth_col = "layer_guess",
+  show = "both",
+  methods = names(banksy_norm),
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  truth_palette = NULL,
+  ncol = 5,
+  legend_point_size = 4,
+  theme_name = "classic"
+)
+p_banksy$plot
+```
+
+The individual panels are also available as `p_banksy$plots$truth` and `p_banksy$plots$predicted` without rerunning clustering.
+
+
+## 9.2 Evaluate BANKSY clustering
+
+We evaluate BANKSY clustering against manual cortical layer
+annotations using five metrics: Adjusted Rand Index (ARI),
+Normalized Mutual Information (NMI), Homogeneity (HOM),
+Completeness (COM), and spatial Average Silhouette Width (ASW).
+
+ARI, NMI, HOM, and COM measure agreement with the manual
+annotations, whereas spatial ASW evaluates the spatial
+compactness and separation of predicted clusters.
+
+Higher values indicate better performance for all metrics.
+ARI and spatial ASW retain their original scales.
+
+The overall clustering agreement score is calculated as
+the arithmetic mean of NMI, HOM, and COM.
+
+```{r banksy-clustering-metrics}
+metrics_df <- calculate_clustering_metrics(
+  norm_list = banksy_norm,
+  ground_truth_col = "layer_guess",
+  cluster_col = "banksy_cluster",
+  methods = names(banksy_norm)
+)
+
+metrics_df
+```
+
+### 9.2.1 Clustering evaluation across normalization methods
+
+```{r banksy-metrics-plot}
+p_metrics <- plot_clustering_metrics(
+  metrics_df = metrics_df,
+  metrics = c("ARI", "NMI", "HOM", "COM", "ASW", "Overall"),
+  point_size = 4,
+  ncol = 2,
+  scales = "free_y",
+  palette = NULL,
+  theme_name = "bw"
+)
+
+
+```
+
+### 9.2.2 Overall normalization method ranking
+
+Normalization methods are ranked according to their mean
+overall clustering agreement score across spatial slices.
+
+```{r banksy-ranking}
+ranking_df <- rank_normalization_methods(
+  metrics_df = metrics_df
+)
+
+ranking_df
+```
+
+### 9.2.3 Visualize normalization method ranking
+
+```{r banksy-ranking-plot}
+p_ranking <- plot_normalization_ranking(
+  ranking_df = ranking_df,
+  bar_width = 0.7,
+  label_size = 3.5,
+  theme_name = "classic"
+)
+
+p_ranking$plot
+```
+
+
+## 9.3 BANKSY clustering with different gene-selection strategies
+
+To investigate the influence of gene selection on clustering
+performance, we evaluate BANKSY using three gene-selection
+strategies: all genes, the top 500 highly variable genes (HVGs),
+and the top 500 spatially variable genes (SVGs).
+
+HVGs and SVGs are selected independently for each normalisation
+method. The same BANKSY clustering parameters are used across
+all gene-selection strategies.
+
+### 9.3.1 Run BANKSY with different gene sets
+
+```{r banksy-gene-selection}
+banksy_genes <- run_banksy_gene_selection(
+  norm_list = norm,
+  svg_list = svg_norm,
+  methods = setdiff(names(norm), "Giotto"),
+  gene_selection = c(
+    "all", "hvg500", "svg500"
+  ),
+  assay_name = "logcounts",
+  k_geom = 15,
+  lambda = 0.8,
+  resolution = 0.2,
+  seed = 123
+)
+```
+
+### 9.3.2 Evaluate clustering performance
+
+Clustering performance is evaluated using ARI, NMI, HOM,
+COM, and spatial ASW. The overall clustering agreement
+score is calculated as the mean of NMI, HOM, and COM.
+
+```{r banksy-gene-metrics}
+metrics_genes <- calculate_gene_selection_metrics(
+  banksy_list = banksy_genes,
+  ground_truth_col = "layer_guess"
+)
+
+metrics_genes
+```
+
+### 9.3.3 Visualize clustering performance
+
+We compare clustering performance across normalisation
+methods and gene-selection strategies. Colours represent
+normalisation methods, while shapes distinguish gene sets.
+
+```{r banksy-gene-metrics-plot}
+p_genes <- plot_gene_selection_metrics(
+    metrics_df = metrics_genes,
+    point_size = 4,
+    ncol = 3,
+    scales = "free_y",
+    theme_name = "classic"
+)
+
+p_genes$plot
+```
+
+### 9.3.4 Overall normalization method ranking
+
+Normalisation methods are ranked separately for each
+gene-selection strategy according to their overall
+clustering agreement score.
+
+```{r banksy-gene-ranking}
+ranking_genes <- do.call(
+  rbind,
+  lapply(
+    split(metrics_genes, metrics_genes$gene_selection),
+    function(df) {
+
+      ranking <- rank_normalization_methods(
+        metrics_df = df
+      )
+
+      ranking$gene_selection <- unique(df$gene_selection)
+
+      ranking
+    }
+  )
+)
+
+rownames(ranking_genes) <- NULL
+
+ranking_genes
+```
+
+### 9.3.5 Visualize normalization method rankings
+
+The ranking plot compares overall clustering agreement
+across normalisation methods for each gene-selection strategy.
+
+```{r banksy-gene-ranking-plot}
+p_ranking_genes <- ggplot2::ggplot(
+  ranking_genes,
+  ggplot2::aes(
+    x = Overall,
+    y = reorder(method, Overall),
+    fill = method
+  )
+) +
+  ggplot2::geom_col(
+    width = 0.7
+  ) +
+  ggplot2::facet_wrap(
+    ~gene_selection,
+    ncol = 3,
+    scales = "free_y"
+  ) +
+  ggplot2::labs(
+    x = "Overall clustering agreement score",
+    y = "Normalisation method"
+  ) +
+  ggplot2::theme_classic() +
+  ggplot2::theme(
+    legend.position = "none",
+    strip.text = ggplot2::element_text(
+      face = "bold"
+    )
+  )
+
+p_ranking_genes
+```
+
+
+# 10. Differential expression and GO enrichment
+
+We identify genes associated with each BANKSY cluster and perform GO Biological Process enrichment using the human annotation database `org.Hs.eg.db`. The cluster-specific differential-expression analysis uses the same settings as the existing `calculate_go()` workflow, including an FDR cutoff of 0.05. GO enrichment is an exploratory interpretation of the identified clusters.
+
+```{r go-analysis}
+go_result <- calculate_go(
+  norm_list = banksy_norm,
+  cluster_col = "banksy_cluster",
+  methods = names(banksy_norm),
+  assay_name = "logcounts",
+  OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.7,
+  min_spots = 30,
+  min_genes = 10,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  readable = TRUE
+)
+
+names(go_result)
+head(go_result$genes)
+head(go_result$go)
+names(go_result$markers)
+names(go_result$universe)
+```
+
+## 10.1 Visualise enriched biological processes
+
+For each cluster and normalisation method, we visualise the five most significant GO terms. The title and subtitle identify the dataset and the comparison. The `top_n` argument controls the displayed terms; the original enrichment results remain available in `go_result`.
+
+```{r go-plot, fig.height=9}
+p_go <- plot_go(
+  go_result = go_result,
+  top_n = 5,
+  method_col = "method",
+  cluster_col = "cluster",
+  method_order = NULL,
+  point_size_range = c(2, 7),
+  theme_name = "classic",
+  methods = NULL,
+  title = "GO enrichment in DLPFC spatial domains",
+  subtitle =NULL,# "Comparison across normalisation methods",
+  ncol = 3
+)
+p_go$plot
+```
+
+# 11. Cell–cell communication analysis
+
+Cell–cell communication (CCC) analysis can be used to investigate
+how different normalisation methods affect inferred signalling
+interactions between cell types.
+
+We use CellChat to infer ligand–receptor interactions and signalling
+pathway activities independently for each normalisation method.
+The resulting communication patterns are then compared across methods.
+
+### 11.1 Prepare data for CellChat
+
+We use the normalised SpatialExperiment objects generated in the
+previous sections, together with their predicted cell-type labels.
+
+For this human DLPFC dataset, we use the human CellChat database.
+
+```{r ccc-prepare, eval=FALSE}
+#library(CellChat)
+
+# Normalised objects with cell-type annotations
+ccc_spe <- norm#annotated_norm
+
+
+# Specify the column containing cell-type labels
+celltype_col <- "cell_type"
+
+# Human CellChat database
+data("CellChatDB.mouse", package = "CellChat")
+ccc_database <- CellChatDB.mouse
+
+# Spatial factors and distances must be calibrated
+# for the coordinate units and spatial technology.
+#
+# Replace these values after validation.
+spatial_factors <- data.frame(
+    ratio = 0.5,
+    tol = 12.5
+)
+
+interaction_range <- 250
+contact_range <- 25
+
+
+```
+
+The cell-type annotation column, normalised expression assay,
+spatial scaling factors, and interaction distances should be
+verified before performing CCC analysis.
+
+Since Visium spots may contain multiple cells, inferred
+communication represents relationships between spot-associated
+cell-type annotations rather than direct single-cell interactions.
+
+### 11.2 Run CellChat across normalisation methods
+
+CellChat is applied independently to each normalised dataset
+using the same analysis parameters.
+
+This allows us to investigate variation in inferred
+communication patterns across normalisation methods.
+
+```{r ccc-run, include=FALSE}
+ccc_results <- run_ccc(
+    spelist = ccc_spe,
+    celltype_col = celltype_col,
+    database = ccc_database,
+    spatial_factors = spatial_factors,
+    interaction_range = interaction_range,
+    contact_range = contact_range,
+    assay_name = "logcounts",
+    nboot = 100,
+    min_cells = 10,
+    trim = 0.1,
+    scale_distance = 0.1,
+    variable_both = FALSE,
+    verbose = TRUE
+)
+
+```
+
+### 11.3 Compare signalling pathway strengths
+
+We compare inferred signalling pathway strengths across
+normalisation methods.
+
+Pathway strengths are summarised using the communication
+probabilities returned by CellChat.
+
+```{r ccc-pathways, eval=FALSE}
+p_ccc_pathways <- plot_ccc_pathways(
+    ccc_result = ccc_results,
+    top_n = 4,
+    method_order = names(ccc_results),
+    log_scale = FALSE
+)
+
+p_ccc_pathways
+```
+
+### 11.4 Compare ligand–receptor interactions
+
+We next compare ligand–receptor communication strengths
+across normalisation methods.
+
+This analysis allows us to examine differences in individual
+inferred interactions and their associated signalling pathways.
+
+```{r ccc-lr, eval=FALSE}
+p_ccc_lr <- plot_ccc_lr(
+    ccc_result = ccc_results,
+    top_n = 15,
+    method_order = names(ccc_results),
+    log_scale = FALSE
+)
+
+p_ccc_lr
+```
+
+### 11.5 Compare sender–receiver communication
+
+We investigate communication between sender and receiver
+cell-type groups under each normalisation method.
+
+The visualisation summarises the total inferred communication
+strength between each pair of cell-type groups.
+
+```{r ccc-sender-receiver, eval=FALSE}
+p_ccc_sender_receiver <- plot_ccc_sender_receiver(
+    ccc_result = ccc_results,
+    methods = names(ccc_results),
+    method_order = names(ccc_results)
+)
+
+p_ccc_sender_receiver
+```
+
+### 11.6 Visualise pathway-specific communication networks
+
+Finally, we visualise CellChat communication networks for
+selected signalling pathways.
+
+Each network represents inferred communication between cell-type
+groups for a particular normalisation method.
+
+```{r ccc-circle, eval=FALSE, fig.width=12, fig.height=8}
+library(ggplotify)
+
+
+# Get detected pathways
+detected_pathways <- unique(unlist(
+  lapply(ccc_results, function(x) x$cellchat@netP$pathways)
+))
+
+selected_pathways <- head(detected_pathways, 2)
+selected_methods <- names(ccc_results)
+
+# Create plots
+plots <- list()
+
+for (pathway in selected_pathways) {
+
+  for (method in selected_methods) {
+
+    cellchat <- ccc_results[[method]]$cellchat
+
+    if (!is.null(cellchat) &&
+        pathway %in% cellchat@netP$pathways) {
+
+      p <- ggplotify::as.ggplot(
+        function() {
+          CellChat::netVisual_aggregate(
+            cellchat,
+            signaling = pathway,
+            layout = "circle"
+          )
+        }
+      )
+
+    } else {
+
+      p <- ggplot2::ggplot() +
+        ggplot2::theme_void() +
+        ggplot2::annotate(
+          "text", x = 0, y = 0,
+          label = "Not detected"
+        )
+    }
+
+    p <- p +
+      ggplot2::labs(
+        title = paste(method, "|", pathway)
+      ) +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          size = 10
+        )
+      )
+
+    plots[[length(plots) + 1]] <- p
+  }
+}
+
+# Combine into one plot
+if (length(plots) > 0) {
+
+  p_circle <- patchwork::wrap_plots(
+    plots,
+    ncol = length(selected_methods)
+  )
+
+  p_circle
+}
+
+p_combined <- (
+  (p_ccc_pathways | p_ccc_lr | p_ccc_sender_receiver) /
+  wrap_elements(full = p_circle)
+) +
+  plot_layout(heights = c(1, 2)) +
+  plot_annotation(tag_levels = "A")
+
+p_combined
+```
+
+### 11.7 Summary
+
+These analyses provide a framework for evaluating the
+sensitivity of inferred cell–cell communication patterns
+to different normalisation methods.
+
+By comparing signalling pathway strengths, ligand–receptor
+interactions, sender–receiver relationships, and pathway-specific
+communication networks, STBench facilitates the assessment
+of normalisation-associated differences in downstream
+CCC analysis.
+
+These comparisons describe differences in computationally
+inferred communication and should not be interpreted as
+direct evidence of biological signalling changes.
+# Summary
+
+This vignette demonstrates how STBench can apply and benchmark several normalisation methods using consistent downstream analyses. The visual comparisons examine QC, normalised library sizes, UMAP, spatial variability, cell-type annotations, spatial clustering and functional enrichment.
+
+The example is currently intended for **local development and testing**. For a distributable package vignette, the data-loading section should use accessible example data, and computationally expensive steps may need a precomputed demonstration dataset or build-time caching strategy. Before interpreting results, confirm that gene identifiers match the selected human marker genes and `org.Hs.eg.db` identifier type.
+
+## Session information
+
+The following information records the R environment
+used to generate this vignette.
+
+```{r session-info}
+sessionInfo()
+```

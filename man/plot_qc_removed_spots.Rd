@@ -40,11 +40,22 @@ This function helps identify whether QC filtering removes
 spots from particular spatial regions.
 }
 \examples{
-\dontrun{
-spe <- add_qcs(spe)
-spe_filtered <- spe[, spe$log_library_size >= 6.3]
+data(spe_example)
 
-plot_qc_removed_spots(spe, spe_filtered)
-}
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_cutoffs <- plot_qc_cutoffs(
+  spe_qc,
+  library_cutoff = 3.5,
+  gene_cutoff = 0.2,
+  n_points = 200,
+  theme_name = "classic"
+)
+
+p_cutoffs$plot
 
 }

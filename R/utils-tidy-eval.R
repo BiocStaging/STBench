@@ -1,4 +1,3 @@
-
 # Tidy evaluation and global variables
 
 

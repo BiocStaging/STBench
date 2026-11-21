@@ -57,3 +57,23 @@ all colData annotations.
 
 All colData annotations from the reference object are retained for
 subsequent plotting.
+
+## Examples
+
+``` r
+data(norm_example)
+
+umap_data <- get_umap_data(
+  norm_example,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
+)
+#> Running PCA and UMAP: None
+#> Warning: You're computing too large a percentage of total singular values, use a standard svd instead.
+#> Running PCA and UMAP: SpaNorm
+#> Warning: You're computing too large a percentage of total singular values, use a standard svd instead.
+```

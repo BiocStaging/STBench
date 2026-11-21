@@ -45,3 +45,14 @@ Only genes shared by all selected methods are used.
 The heatmap displays the lower triangle of the
 correlation matrix, including the diagonal.
 }
+\examples{
+data(svg_example)
+
+p <- plot_svg_rank_correlation(
+  svg_norm = svg_example,
+  show_values = TRUE,
+  digits = 2
+)
+
+p$plot
+}

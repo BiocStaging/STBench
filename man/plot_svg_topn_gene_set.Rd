@@ -71,3 +71,17 @@ variable genes (SVGs) across normalisation methods.
 The gene set may contain housekeeping genes, negative-control
 genes, marker genes, or any other user-defined gene set.
 }
+\examples{
+data(svg_example)
+
+genes <- head(rownames(svg_example[[1]]), 20)
+
+p <- plot_svg_topn_gene_set(
+  svg_norm = svg_example,
+  genes = genes,
+  top_n = c(10, 20, 50),
+  gene_set_name = "Example genes"
+)
+
+p$plot
+}

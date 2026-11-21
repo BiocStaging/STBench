@@ -1,6 +1,4 @@
-
 # Quality-control metrics
-
 
 
 #' Add quality-control metrics
@@ -22,30 +20,33 @@
 #'
 #' @return A SpatialExperiment object with QC metrics added to
 #'   `colData()` and `rowData()`.
+#' @examples
+#' data(spe_example)
 #'
+#' spe_qc <- add_qcs(
+#'   spe_example,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
 #' @export
 add_qcs <- function(
-    spe,
-    assay_name = "counts",
-    mito_pattern = "^MT-"
+  spe,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
 ) {
-
-
   # Check assay
 
 
   if (
     !assay_name %in%
-    SummarizedExperiment::assayNames(spe)
+      SummarizedExperiment::assayNames(spe)
   ) {
-
     stop(
       "Assay '",
       assay_name,
       "' was not found."
     )
   }
-
 
 
   # Counts
@@ -55,7 +56,6 @@ add_qcs <- function(
     spe,
     assay_name
   )
-
 
 
   # SPOT-LEVEL QC
@@ -79,7 +79,6 @@ add_qcs <- function(
     )
 
 
-
   # GENE-LEVEL QC
 
 
@@ -97,7 +96,6 @@ add_qcs <- function(
     )
 
 
-
   # MITOCHONDRIAL PROPORTION
 
 
@@ -109,18 +107,14 @@ add_qcs <- function(
 
 
   if (any(is_mito)) {
-
     mito_counts <-
       MatrixGenerics::colSums2(
         counts_mat[
-          is_mito,
-          ,
+          is_mito, ,
           drop = FALSE
         ]
       )
-
   } else {
-
     mito_counts <- rep(
       0,
       ncol(spe)
@@ -137,10 +131,10 @@ add_qcs <- function(
 
   spe$mito_fraction <-
     mito_counts /
-    pmax(
-      spe$library_size,
-      1
-    )
+      pmax(
+        spe$library_size,
+        1
+      )
 
 
   return(spe)
@@ -148,7 +142,6 @@ add_qcs <- function(
 
 
 # Quality-control plots
-
 
 
 #' Plot quality-control distributions
@@ -168,16 +161,30 @@ add_qcs <- function(
 #'
 #' @return A list containing plotting data, individual plots,
 #'   and the combined plot.
+#' @examples
+#' data(spe_example)
 #'
+#' spe_qc <- add_qcs(
+#'   spe_example,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
+#'
+#' p_qc <- plot_qc(
+#'   spe_qc,
+#'   bins = 45,
+#'   show_density = TRUE,
+#'   theme_name = "classic"
+#' )
+#'
+#' p_qc$plot
 #' @export
 plot_qc <- function(
-    spe,
-    bins = 45,
-    show_density = TRUE,
-    theme_name = "classic"
+  spe,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
 ) {
-
-
   # Check QC metrics
 
 
@@ -195,12 +202,11 @@ plot_qc <- function(
   if (
     !all(
       required_spot %in%
-      colnames(
-        SummarizedExperiment::colData(spe)
-      )
+        colnames(
+          SummarizedExperiment::colData(spe)
+        )
     )
   ) {
-
     stop(
       "QC metrics were not found. ",
       "Run add_qcs() first."
@@ -211,18 +217,16 @@ plot_qc <- function(
   if (
     !all(
       required_gene %in%
-      colnames(
-        SummarizedExperiment::rowData(spe)
-      )
+        colnames(
+          SummarizedExperiment::rowData(spe)
+        )
     )
   ) {
-
     stop(
       "Gene-level QC metrics were not found. ",
       "Run add_qcs() first."
     )
   }
-
 
 
   # Data
@@ -240,26 +244,20 @@ plot_qc <- function(
     )
 
 
-
   # Plot helper
 
 
-
-  .qc_hist <- function(
-    data,
-    variable,
-    x_label,
-    title,
-    fill
-  ) {
-
+  .qc_hist <- function(data,
+                       variable,
+                       x_label,
+                       title,
+                       fill) {
     p <- ggplot2::ggplot(
       data,
       ggplot2::aes(
         x = .data[[variable]]
       )
     ) +
-
       ggplot2::geom_histogram(
         bins = bins,
         fill = fill,
@@ -281,10 +279,8 @@ plot_qc <- function(
       ) +
 
       ggplot2::theme(
-
         panel.grid =
           ggplot2::element_blank(),
-
         plot.title =
           ggplot2::element_text(
             face = "bold",
@@ -292,9 +288,6 @@ plot_qc <- function(
           )
       )
   }
-
-
-
 
 
   # Library size
@@ -357,25 +350,20 @@ plot_qc <- function(
 
   return(
     list(
-
       data = list(
         spots = qc_df,
         genes = gene_df
       ),
-
       plots = list(
         library_size = p_library,
         gene_mean = p_gene,
         detected_genes = p_detected,
         mitochondrial = p_mito
       ),
-
       plot = p
     )
   )
 }
-
-
 
 
 #' Plot QC cutoff effects
@@ -397,37 +385,58 @@ plot_qc <- function(
 #'   `"minimal"`, or `"gray"`.
 #'
 #' @return A list containing cutoff data and plot.
+#' @examples
+#' data(spe_example)
 #'
+#' spe_qc <- add_qcs(
+#'   spe_example,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
+#'
+#' ls <- c(100, 200)
+#' gc <- c(20, 50)
+#'
+#' p <- lapply(seq_len(2), function(i) {
+#'   p_cutoffs <- plot_qc_cutoffs(
+#'     spe_qc,
+#'     library_cutoff = ls[i],
+#'     gene_cutoff = gc[i],
+#'     n_points = 200,
+#'     theme_name = "classic"
+#'   )
+#'
+#'   p_cutoffs$plot
+#' })
+#'
+#' patchwork::wrap_plots(p, ncol = 1) +
+#'   patchwork::plot_annotation(tag_levels = "A")
 #' @export
 plot_qc_cutoffs <- function(
-    spe,
-    library_cutoff = NULL,
-    gene_cutoff = NULL,
-    n_points = 200,
-    theme_name = "classic"
+  spe,
+  library_cutoff = NULL,
+  gene_cutoff = NULL,
+  n_points = 200,
+  theme_name = "classic"
 ) {
-
-
   # Check QC metrics
 
 
   if (
     !"log_library_size" %in%
-    colnames(
-      SummarizedExperiment::colData(spe)
-    ) ||
-    !"log_gene_mean" %in%
-    colnames(
-      SummarizedExperiment::rowData(spe)
-    )
+      colnames(
+        SummarizedExperiment::colData(spe)
+      ) ||
+      !"log_gene_mean" %in%
+        colnames(
+          SummarizedExperiment::rowData(spe)
+        )
   ) {
-
     stop(
       "QC metrics were not found. ",
       "Run add_qcs() first."
     )
   }
-
 
 
   # Library-size cutoffs
@@ -444,7 +453,6 @@ plot_qc_cutoffs <- function(
     ),
     length.out = n_points
   )
-
 
 
   # Gene-expression cutoffs
@@ -469,18 +477,14 @@ plot_qc_cutoffs <- function(
   )
 
 
-
   # Spot removal
 
 
   df_spots <- data.frame(
-
     cutoff = library_cutoffs,
-
     removed = vapply(
       library_cutoffs,
       function(x) {
-
         mean(
           spe$log_library_size < x,
           na.rm = TRUE
@@ -488,23 +492,18 @@ plot_qc_cutoffs <- function(
       },
       numeric(1)
     ),
-
     type = "Spots"
   )
-
 
 
   # Gene removal
 
 
   df_genes <- data.frame(
-
     cutoff = gene_cutoffs,
-
     removed = vapply(
       gene_cutoffs,
       function(x) {
-
         mean(
           log_gene_mean < x,
           na.rm = TRUE
@@ -512,10 +511,8 @@ plot_qc_cutoffs <- function(
       },
       numeric(1)
     ),
-
     type = "Genes"
   )
-
 
 
   # Combine
@@ -525,7 +522,6 @@ plot_qc_cutoffs <- function(
     df_spots,
     df_genes
   )
-
 
 
   # Selected cutoffs
@@ -539,7 +535,6 @@ plot_qc_cutoffs <- function(
 
 
   if (!is.null(library_cutoff)) {
-
     removed_spots <- mean(
       spe$log_library_size < library_cutoff,
       na.rm = TRUE
@@ -557,7 +552,6 @@ plot_qc_cutoffs <- function(
 
 
   if (!is.null(gene_cutoff)) {
-
     removed_genes <- mean(
       log_gene_mean < gene_cutoff,
       na.rm = TRUE
@@ -572,7 +566,6 @@ plot_qc_cutoffs <- function(
       )
     )
   }
-
 
 
   # Plot
@@ -624,12 +617,10 @@ plot_qc_cutoffs <- function(
     .get_plot_theme(theme_name)
 
 
-
   # Add selected cutoff lines and points
 
 
   add_cutoff <- function(p, selected, type) {
-
     cutoff_df <- dplyr::filter(
       selected,
       .data$type == .env$type
@@ -682,7 +673,6 @@ plot_qc_cutoffs <- function(
   )
 
 
-
   # Combine plots
 
 
@@ -706,7 +696,6 @@ plot_qc_cutoffs <- function(
 # Quality-control filtering
 
 
-
 #' Filter a SpatialExperiment using QC thresholds
 #'
 #' Filter spatial locations using log library size and genes
@@ -726,32 +715,43 @@ plot_qc_cutoffs <- function(
 #'   mitochondrial genes. Default is `"^MT-"`.
 #'
 #' @return A filtered SpatialExperiment object.
-#'
+#' @examples
+#' data(spe_example)
+#' spe_qc <- add_qcs(
+#'   spe_example,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
+#' spe_filtered <- filter_qc(
+#'   spe_qc,
+#'   library_cutoff = 4.5,
+#'   gene_cutoff = 0.1,
+#'   recalculate = TRUE,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
 #' @export
 filter_qc <- function(
-    spe,
-    library_cutoff = NULL,
-    gene_cutoff = NULL,
-    recalculate = TRUE,
-    assay_name = "counts",
-    mito_pattern = "^MT-"
+  spe,
+  library_cutoff = NULL,
+  gene_cutoff = NULL,
+  recalculate = TRUE,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
 ) {
-
-
   # Check QC metrics
 
 
   if (
     !"log_library_size" %in%
-    colnames(
-      SummarizedExperiment::colData(spe)
-    ) ||
-    !"log_gene_mean" %in%
-    colnames(
-      SummarizedExperiment::rowData(spe)
-    )
+      colnames(
+        SummarizedExperiment::colData(spe)
+      ) ||
+      !"log_gene_mean" %in%
+        colnames(
+          SummarizedExperiment::rowData(spe)
+        )
   ) {
-
     stop(
       "QC metrics were not found. ",
       "Run add_qcs() first."
@@ -759,45 +759,36 @@ filter_qc <- function(
   }
 
 
-
   # Spot filter
 
 
   if (is.null(library_cutoff)) {
-
     keep_spots <- rep(
       TRUE,
       ncol(spe)
     )
-
   } else {
-
     keep_spots <-
       spe$log_library_size >=
-      library_cutoff
+        library_cutoff
   }
-
 
 
   # Gene filter
 
 
   if (is.null(gene_cutoff)) {
-
     keep_genes <- rep(
       TRUE,
       nrow(spe)
     )
-
   } else {
-
     keep_genes <-
       SummarizedExperiment::rowData(
         spe
       )$log_gene_mean >=
-      gene_cutoff
+        gene_cutoff
   }
-
 
 
   # Filter
@@ -809,12 +800,10 @@ filter_qc <- function(
   ]
 
 
-
   # Recalculate QC metrics
 
 
   if (recalculate) {
-
     spe_filtered <- add_qcs(
       spe_filtered,
       assay_name = assay_name,
@@ -825,7 +814,6 @@ filter_qc <- function(
 
   return(spe_filtered)
 }
-
 
 
 #' Plot Spatial Distribution of Removed QC Spots
@@ -853,26 +841,36 @@ filter_qc <- function(
 #' spots from particular spatial regions.
 #'
 #' @examples
-#' \dontrun{
-#' spe <- add_qcs(spe)
-#' spe_filtered <- spe[, spe$log_library_size >= 6.3]
+#' data(spe_example)
 #'
-#' plot_qc_removed_spots(spe, spe_filtered)
-#' }
+#' spe_qc <- add_qcs(
+#'   spe_example,
+#'   assay_name = "counts",
+#'   mito_pattern = "^MT-"
+#' )
+#'
+#' p_cutoffs <- plot_qc_cutoffs(
+#'   spe_qc,
+#'   library_cutoff = 3.5,
+#'   gene_cutoff = 0.2,
+#'   n_points = 200,
+#'   theme_name = "classic"
+#' )
+#'
+#' p_cutoffs$plot
 #'
 #' @export
 plot_qc_removed_spots <- function(
-    spe,
-    spe_filtered,
-    point_size = 0.8,
-    theme_name = "classic"
+  spe,
+  spe_filtered,
+  point_size = 0.8,
+  theme_name = "classic"
 ) {
-
   # Validate input objects
 
   if (
     !inherits(spe, "SpatialExperiment") ||
-    !inherits(spe_filtered, "SpatialExperiment")
+      !inherits(spe_filtered, "SpatialExperiment")
   ) {
     stop(
       "Both inputs must be SpatialExperiment objects.",
@@ -887,11 +885,11 @@ plot_qc_removed_spots <- function(
 
   if (
     is.null(original_ids) ||
-    is.null(filtered_ids) ||
-    anyNA(original_ids) ||
-    anyNA(filtered_ids) ||
-    anyDuplicated(original_ids) ||
-    anyDuplicated(filtered_ids)
+      is.null(filtered_ids) ||
+      anyNA(original_ids) ||
+      anyNA(filtered_ids) ||
+      anyDuplicated(original_ids) ||
+      anyDuplicated(filtered_ids)
   ) {
     stop(
       "Both objects must have unique, non-missing spot IDs.",
@@ -908,9 +906,9 @@ plot_qc_removed_spots <- function(
 
   if (
     !is.numeric(point_size) ||
-    length(point_size) != 1L ||
-    !is.finite(point_size) ||
-    point_size <= 0
+      length(point_size) != 1L ||
+      !is.finite(point_size) ||
+      point_size <= 0
   ) {
     stop(
       "point_size must be a positive number.",
@@ -924,7 +922,7 @@ plot_qc_removed_spots <- function(
 
   if (
     ncol(coords) < 2L ||
-    nrow(coords) != ncol(spe)
+      nrow(coords) != ncol(spe)
   ) {
     stop(
       "Valid two-dimensional spatial coordinates are required.",
@@ -967,17 +965,15 @@ plot_qc_removed_spots <- function(
   p <- ggplot2::ggplot(
     plot_df,
     ggplot2::aes(
-      x = x,
-      y = y,
-      colour = status
+      x = .data$x,
+      y = .data$y,
+      colour = .data$status
     )
   ) +
-
     ggplot2::geom_point(
       size = point_size,
       alpha = 0.85
     ) +
-
     ggplot2::scale_colour_manual(
       values = c(
         "Retained" = "#4C78A8",
@@ -985,9 +981,7 @@ plot_qc_removed_spots <- function(
       ),
       drop = FALSE
     ) +
-
     ggplot2::coord_fixed() +
-
     ggplot2::labs(
       title = "Spatial distribution map of QC-filtered cells",
       subtitle = paste0(
@@ -1002,9 +996,7 @@ plot_qc_removed_spots <- function(
       y = "Y",
       colour = "QC status"
     ) +
-
     .get_plot_theme(theme_name) +
-
     ggplot2::theme(
       panel.grid = ggplot2::element_blank(),
       plot.title = ggplot2::element_text(
@@ -1015,7 +1007,3 @@ plot_qc_removed_spots <- function(
 
   return(p)
 }
-
-
-
-

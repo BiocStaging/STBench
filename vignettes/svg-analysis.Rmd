@@ -1,0 +1,237 @@
+---
+title: "Spatially variable gene analysis with STBench"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Spatially variable gene analysis with STBench}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
+)
+library(STBench)
+```
+
+# Introduction
+
+We use the same SVG detection procedure for each normalised dataset to examine how normalisation affects spatial variability statistics and gene rankings. The supplied `svg_example` contains precomputed results, avoiding repeated, potentially expensive nnSVG calculations.
+
+```{r load-data}
+data(norm_example)
+data(svg_example)
+norm <- norm_example
+svg_norm <- svg_example
+names(svg_norm)
+```
+
+# Detect spatially variable genes
+
+To reproduce SVG detection from the normalised data, run the code below. The remaining sections use the supplied precomputed results.
+
+```{r svg-detection}
+svg_recomputed <- run_svg(
+  norm_list = norm,
+  method = "nnSVG",
+  n_threads = 1,
+  verbose = FALSE
+)
+```
+
+# Evaluate biologically relevant marker genes
+
+We evaluate example genes available in the SVG results rather than assuming that a particular tissue-marker panel is present in this small dataset.
+
+```{r svg-marker-genes}
+common_genes <- Reduce(intersect, lapply(svg_norm, rownames))
+marker_genes <- head(common_genes, 5)
+marker_genes
+```
+
+## Compare SVG statistics
+
+Higher likelihood-ratio (LR) statistics indicate stronger statistical evidence of spatial variation.
+
+```{r svg-marker-stat}
+if (length(marker_genes) > 0L) {
+  p_svg_markers <- plot_svg_stat(
+    svg_norm = svg_norm,
+    genes = marker_genes,
+    stat = "LR_stat",
+    transform = "log",
+    point_size = 4,
+    gene_id = "rownames",
+    theme_name = "bw"
+  )
+  p_svg_markers$plot
+}
+```
+
+## Compare SVG rankings
+
+Smaller ranks indicate higher relative priority in SVG detection.
+
+```{r svg-marker-rank}
+if (length(marker_genes) > 0L) {
+  p_svg_rank <- plot_svg_rank(
+    svg_norm = svg_norm,
+    genes = marker_genes,
+    point_size = 3,
+    gene_id = "rownames",
+    theme_name = "bw"
+  )
+  p_svg_rank$plot
+}
+```
+
+## Investigate SVG ranks against LR statistics
+
+```{r svg-rank-vs-stat}
+if (length(marker_genes) > 0L) {
+  p <- plot_svg_rank_vs_stat(
+    svg_norm = svg_norm,
+    genes = marker_genes,
+    stat = "LR_stat",
+    transform = "log",
+    scales = "free",
+    ncol = 3,
+    point_size = 3,
+    theme_name = "bw"
+  )
+  p$plot
+}
+```
+
+## Compare overall marker gene SVG statistics
+
+```{r svg-marker-distribution}
+if (length(marker_genes) > 0L) {
+  p_svg_mk <- plot_svg_gene_set_distribution(
+    svg_norm = svg_norm,
+    genes = marker_genes,
+    stat = "LR_stat",
+    gene_id = "rownames",
+    transform = "log",
+    plot_type = "boxplot",
+    add_jitter = TRUE,
+    point_size = 1.5,
+    theme_name = "bw"
+  )
+  p_svg_mk$plot
+}
+```
+
+# Evaluate SVG ranking consistency
+
+Correlations are calculated using genes shared across the methods. Higher correlations indicate greater similarity in rankings.
+
+```{r svg-rank-correlation}
+p_cor <- plot_svg_rank_correlation(
+  svg_norm = svg_norm,
+  show_values = TRUE,
+  digits = 2,
+  theme_name = "classic"
+)
+p_cor$plot
+```
+
+# Investigate housekeeping gene behaviour
+
+Housekeeping genes are generally expected to exhibit relatively stable expression, although they are not necessarily spatially uniform. A tissue-specific, curated list is preferable in full analyses.
+
+For a self-contained demonstration, we use a small subset of the available genes as an *illustrative gene set*. These genes are not claimed to be housekeeping genes.
+
+```{r svg-housekeeping-genes}
+example_gene_set <- head(common_genes, 10)
+```
+
+```{r svg-housekeeping-distribution}
+if (length(example_gene_set) > 0L) {
+  p_svg_set <- plot_svg_gene_set_distribution(
+    svg_norm = svg_norm,
+    genes = example_gene_set,
+    stat = "LR_stat",
+    gene_id = "rownames",
+    transform = "log",
+    plot_type = "boxplot",
+    add_jitter = TRUE,
+    point_size = 1.5,
+    theme_name = "classic"
+  )
+  p_svg_set$plot
+}
+```
+
+## Examine genes among top-ranked SVGs
+
+```{r svg-topn}
+if (length(example_gene_set) > 0L) {
+  p_topn <- plot_svg_topn_gene_set(
+    svg_norm = svg_norm,
+    genes = example_gene_set,
+    top_n = c(10, 20, 50),
+    gene_id = "rownames",
+    theme_name = "bw",
+    gene_set_name = "Example gene set"
+  )
+  p_topn$plot
+}
+```
+
+## Compare SVG statistics between gene sets
+
+```{r svg-gene-sets}
+gene_sets <- list(
+  "Example gene set" = example_gene_set,
+  "Other genes" = setdiff(common_genes, example_gene_set)
+)
+if (all(lengths(gene_sets) > 0L)) {
+  p_svg_sets <- plot_svg_gene_sets(
+    svg_norm = svg_norm,
+    gene_sets = gene_sets,
+    stat = "LR_stat",
+    gene_id = "rownames",
+    transform = "log",
+    plot_type = "boxplot",
+    theme_name = "bw"
+  )
+  p_svg_sets$plot
+}
+```
+
+# Spatial expression of marker genes
+
+Expression can be scaled between 0 and 1 by gene for comparing spatial patterns; unscaled values can also be plotted, but numerical scales need not be directly comparable across transformations.
+
+```{r spatial-expression-scaled}
+if (length(marker_genes) > 0L) {
+  p_marker_maps <- plot_spatial_expression(
+    norm_list = norm,
+    genes = head(marker_genes, 2),
+    methods = names(norm),
+    assay_name = "logcounts",
+    scale_expr = TRUE,
+    scale_by = "gene",
+    point_size = 0.5,
+    colour_option = "magma",
+    ncol_genes = 1,
+    theme_name = "classic"
+  )
+  p_marker_maps$plot
+}
+```
+
+# Session information
+
+```{r session-info}
+sessionInfo()
+```

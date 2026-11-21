@@ -86,3 +86,17 @@ genes, biological marker genes, or any custom gene sets.
 
 Each gene set is displayed in a separate facet.
 }
+\examples{
+data(svg_example)
+
+marker_genes <- head(rownames(svg_example[[1]]), 5)
+
+p <- plot_svg_stat(
+  svg_norm = svg_example,
+  genes = marker_genes,
+  stat = "LR_stat",
+  transform = "log"
+)
+
+p$plot
+}

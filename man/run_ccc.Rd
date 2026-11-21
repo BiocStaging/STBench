@@ -62,3 +62,27 @@ Named list containing CellChat results for each method.
 Runs CellChat cell-cell communication analysis across multiple
 normalized versions of the same SpatialExperiment object.
 }
+\examples{
+data(norm_ccc_example)
+
+data("CellChatDB.mouse", package = "CellChat")
+
+ccc_results <- run_ccc(
+  spelist = norm_ccc_example,
+  celltype_col = "cell_type",
+  database = CellChat::CellChatDB.mouse,
+  spatial_factors = data.frame(
+    ratio = 0.5,
+    tol = 12.5
+  ),
+  interaction_range = 250,
+  contact_range = 25,
+  assay_name = "logcounts",
+  nboot = 10,
+  min_cells = 5,
+  trim = 0.1,
+  scale_distance = 0.1,
+  variable_both = FALSE,
+  verbose = FALSE
+)
+}

@@ -1,6 +1,4 @@
-
 # CCC RUNNER
-
 
 
 #' Run CellChat across normalization methods
@@ -30,25 +28,46 @@
 #'
 #' @return Named list containing CellChat results for each method.
 #'
+#' @examples
+#' data(norm_ccc_example)
+#'
+#' data("CellChatDB.mouse", package = "CellChat")
+#'
+#' ccc_results <- run_ccc(
+#'   spelist = norm_ccc_example,
+#'   celltype_col = "cell_type",
+#'   database = CellChat::CellChatDB.mouse,
+#'   spatial_factors = data.frame(
+#'     ratio = 0.5,
+#'     tol = 12.5
+#'   ),
+#'   interaction_range = 250,
+#'   contact_range = 25,
+#'   assay_name = "logcounts",
+#'   nboot = 10,
+#'   min_cells = 5,
+#'   trim = 0.1,
+#'   scale_distance = 0.1,
+#'   variable_both = FALSE,
+#'   verbose = FALSE
+#' )
 #' @export
 run_ccc <- function(
-    spelist,
-    celltype_col,
-    database,
-    spatial_factors,
-    interaction_range,
-    contact_range,
-    assay_name = "logcounts",
-    nboot = 100,
-    min_cells = 10,
-    trim = 0.1,
-    scale_distance = 0.1,
-    variable_both = FALSE,
-    verbose = TRUE,
-    ...
+  spelist,
+  celltype_col,
+  database,
+  spatial_factors,
+  interaction_range,
+  contact_range,
+  assay_name = "logcounts",
+  nboot = 100,
+  min_cells = 10,
+  trim = 0.1,
+  scale_distance = 0.1,
+  variable_both = FALSE,
+  verbose = TRUE,
+  ...
 ) {
-
-
   # Dependency
 
 
@@ -58,7 +77,6 @@ run_ccc <- function(
       call. = FALSE
     )
   }
-
 
 
   # Input checks
@@ -79,8 +97,7 @@ run_ccc <- function(
   }
 
   if (!is.character(celltype_col) ||
-      length(celltype_col) != 1) {
-
+    length(celltype_col) != 1) {
     stop(
       "'celltype_col' must be a single column name.",
       call. = FALSE
@@ -109,14 +126,12 @@ run_ccc <- function(
   }
 
 
-
   # Run all normalization methods
 
 
   results <- lapply(
     names(spelist),
     function(method_name) {
-
       if (verbose) {
         message(
           "Running CellChat | method: ",
@@ -137,7 +152,8 @@ run_ccc <- function(
         min_cells = min_cells,
         trim = trim,
         scale_distance = scale_distance,
-        variable_both = variable_both
+        variable_both = variable_both,
+        ...
       )
     }
   )
@@ -148,29 +164,25 @@ run_ccc <- function(
 }
 
 
-
-
 # INTERNAL: RUN CCC FOR ONE SPE
 
 
 .run_ccc_one <- function(
-    spe,
-    method_name,
-    celltype_col,
-    database,
-    spatial_factors,
-    interaction_range,
-    contact_range,
-    assay_name,
-    nboot,
-    min_cells,
-    trim,
-    scale_distance,
-    variable_both,
-    ...
+  spe,
+  method_name,
+  celltype_col,
+  database,
+  spatial_factors,
+  interaction_range,
+  contact_range,
+  assay_name,
+  nboot,
+  min_cells,
+  trim,
+  scale_distance,
+  variable_both,
+  ...
 ) {
-
-
   # Metadata
 
 
@@ -188,7 +200,6 @@ run_ccc <- function(
       call. = FALSE
     )
   }
-
 
 
   # Remove missing labels
@@ -209,13 +220,11 @@ run_ccc <- function(
   }
 
 
-
   # Expression matrix
 
 
   if (!assay_name %in%
-      SummarizedExperiment::assayNames(spe)) {
-
+    SummarizedExperiment::assayNames(spe)) {
     stop(
       "Assay '",
       assay_name,
@@ -232,13 +241,11 @@ run_ccc <- function(
   )
 
   if (!inherits(data.input, "dgCMatrix")) {
-
     data.input <- methods::as(
       as.matrix(data.input),
       "dgCMatrix"
     )
   }
-
 
 
   # Metadata for CellChat
@@ -262,7 +269,6 @@ run_ccc <- function(
   )
 
   rownames(meta) <- colnames(data.input)
-
 
 
   # Spatial coordinates
@@ -293,7 +299,6 @@ run_ccc <- function(
   rownames(coordinates) <- colnames(data.input)
 
 
-
   # Create CellChat object
 
 
@@ -307,14 +312,12 @@ run_ccc <- function(
   )
 
 
-
   # Database
 
 
   cellchat@DB <- CellChat::subsetDB(
     database
   )
-
 
 
   # Preprocessing
@@ -334,13 +337,11 @@ run_ccc <- function(
   )
 
 
-
   # Check LR pairs
 
 
   if (is.null(cellchat@LR$LRsig) ||
-      nrow(cellchat@LR$LRsig) == 0) {
-
+    nrow(cellchat@LR$LRsig) == 0) {
     stop(
       "No ligand-receptor pairs were identified for method '",
       method_name,
@@ -348,7 +349,6 @@ run_ccc <- function(
       call. = FALSE
     )
   }
-
 
 
   # Communication probability
@@ -378,7 +378,8 @@ run_ccc <- function(
 
 
   df.net <- CellChat::subsetCommunication(
-    cellchat
+    cellchat,
+    thresh = 0.05
   )
 
   if (nrow(df.net) > 0) {
@@ -386,17 +387,18 @@ run_ccc <- function(
   }
 
 
-
   # Pathway-level results
 
 
   cellchat <- CellChat::computeCommunProbPathway(
-    cellchat
+    cellchat,
+    thresh = 0.05
   )
 
   df.netP <- CellChat::subsetCommunication(
     cellchat,
-    slot.name = "netP"
+    slot.name = "netP",
+    thresh = 0.05
   )
 
   if (nrow(df.netP) > 0) {
@@ -404,14 +406,13 @@ run_ccc <- function(
   }
 
 
-
   # Aggregate network
 
 
   cellchat <- CellChat::aggregateNet(
-    cellchat
+    cellchat,
+    thresh = 0.05
   )
-
 
 
   # Return
@@ -425,24 +426,20 @@ run_ccc <- function(
 }
 
 
-
-
 # INTERNAL: COMBINE CCC RESULTS
 
 
 .combine_ccc_results <- function(
-    ccc_result,
-    type = c(
-      "pathway",
-      "LR"
-    )
+  ccc_result,
+  type = c(
+    "pathway",
+    "LR"
+  )
 ) {
-
   type <- match.arg(type)
 
   if (!is.list(ccc_result) ||
-      length(ccc_result) == 0) {
-
+    length(ccc_result) == 0) {
     stop(
       "'ccc_result' must be the output from run_ccc().",
       call. = FALSE
@@ -460,7 +457,6 @@ run_ccc <- function(
   out <- lapply(
     names(ccc_result),
     function(method_name) {
-
       x <- ccc_result[[method_name]][[element_name]]
 
       if (is.null(x) || nrow(x) == 0) {
@@ -496,10 +492,7 @@ run_ccc <- function(
 }
 
 
-
-
 # PLOT 1: PATHWAY STRENGTH
-
 
 
 #' Plot CCC signaling pathway strength
@@ -513,27 +506,54 @@ run_ccc <- function(
 #'
 #' @return A ggplot object.
 #'
+#'
+#' @examples
+#' data(norm_ccc_example)
+#' data("CellChatDB.mouse", package = "CellChat")
+#'
+#' ccc_results <- run_ccc(
+#'   spelist = norm_ccc_example,
+#'   celltype_col = "cell_type",
+#'   database = CellChat::CellChatDB.mouse,
+#'   spatial_factors = data.frame(
+#'     ratio = 0.5,
+#'     tol = 12.5
+#'   ),
+#'   interaction_range = 250,
+#'   contact_range = 25,
+#'   nboot = 10,
+#'   min_cells = 5,
+#'   verbose = FALSE
+#' )
+#'
+#' p <- plot_ccc_pathways(
+#'   ccc_result = ccc_results,
+#'   top_n = 4,
+#'   method_order = names(ccc_results),
+#'   log_scale = FALSE
+#' )
+#'
+#' p
 #' @export
 plot_ccc_pathways <- function(
-    ccc_result,
-    pathways = NULL,
-    top_n = 10,
-    method_order = NULL,
-    method_cols = NULL,
-    log_scale = FALSE
+  ccc_result,
+  pathways = NULL,
+  top_n = 10,
+  method_order = NULL,
+  method_cols = NULL,
+  log_scale = FALSE
 ) {
-
   df <- .combine_ccc_results(
     ccc_result,
     type = "pathway"
   )
 
 
-  plot_df <- df %>%
+  plot_df <- df |>
     dplyr::group_by(
       method,
       pathway_name
-    ) %>%
+    ) |>
     dplyr::summarise(
       pathway_strength = sum(
         prob,
@@ -543,39 +563,36 @@ plot_ccc_pathways <- function(
     )
 
 
-
   # Select pathways
 
 
   if (is.null(pathways)) {
-
-    pathways <- plot_df %>%
+    pathways <- plot_df |>
       dplyr::group_by(
         pathway_name
-      ) %>%
+      ) |>
       dplyr::summarise(
         mean_strength = mean(
           pathway_strength,
           na.rm = TRUE
         ),
         .groups = "drop"
-      ) %>%
+      ) |>
       dplyr::slice_max(
         mean_strength,
         n = top_n,
         with_ties = FALSE
-      ) %>%
+      ) |>
       dplyr::pull(
         pathway_name
       )
   }
 
 
-  plot_df <- plot_df %>%
+  plot_df <- plot_df |>
     dplyr::filter(
       pathway_name %in% pathways
     )
-
 
 
   # Method order
@@ -595,7 +612,6 @@ plot_ccc_pathways <- function(
     plot_df$pathway_name,
     levels = rev(pathways)
   )
-
 
 
   # Plot
@@ -619,7 +635,7 @@ plot_ccc_pathways <- function(
     ggplot2::labs(
       x = "Signaling pathway",
       y = "Communication strength",
-      fill = "Normalization method"
+      fill = "Method"
     ) +
     ggplot2::theme_bw() +
     ggplot2::theme(
@@ -629,7 +645,6 @@ plot_ccc_pathways <- function(
 
 
   if (!is.null(method_cols)) {
-
     p <- p +
       ggplot2::scale_fill_manual(
         values = method_cols
@@ -638,7 +653,6 @@ plot_ccc_pathways <- function(
 
 
   if (log_scale) {
-
     p <- p +
       ggplot2::scale_y_log10()
   }
@@ -648,10 +662,7 @@ plot_ccc_pathways <- function(
 }
 
 
-
-
 # PLOT 2: LIGAND-RECEPTOR STRENGTH
-
 
 
 #' Plot CCC ligand-receptor interactions
@@ -666,46 +677,70 @@ plot_ccc_pathways <- function(
 #'
 #' @return A ggplot object.
 #'
+#'
+#' @examples
+#' data(norm_ccc_example)
+#' data("CellChatDB.mouse", package = "CellChat")
+#'
+#' ccc_results <- run_ccc(
+#'   spelist = norm_ccc_example,
+#'   celltype_col = "cell_type",
+#'   database = CellChat::CellChatDB.mouse,
+#'   spatial_factors = data.frame(
+#'     ratio = 0.5,
+#'     tol = 12.5
+#'   ),
+#'   interaction_range = 250,
+#'   contact_range = 25,
+#'   nboot = 10,
+#'   min_cells = 5,
+#'   verbose = FALSE
+#' )
+#'
+#' p <- plot_ccc_lr(
+#'   ccc_result = ccc_results,
+#'   top_n = 15,
+#'   method_order = names(ccc_results),
+#'   log_scale = FALSE
+#' )
+#'
+#' p
 #' @export
 plot_ccc_lr <- function(
-    ccc_result,
-    pathways = NULL,
-    interactions = NULL,
-    top_n = 15,
-    method_order = NULL,
-    method_cols = NULL,
-    log_scale = FALSE
+  ccc_result,
+  pathways = NULL,
+  interactions = NULL,
+  top_n = 15,
+  method_order = NULL,
+  method_cols = NULL,
+  log_scale = FALSE
 ) {
-
   df <- .combine_ccc_results(
     ccc_result,
     type = "LR"
   )
 
 
-
   # Pathway filter
 
 
   if (!is.null(pathways)) {
-
-    df <- df %>%
+    df <- df |>
       dplyr::filter(
         pathway_name %in% pathways
       )
   }
 
 
-
   # Summarise
 
 
-  plot_df <- df %>%
+  plot_df <- df |>
     dplyr::group_by(
       method,
       pathway_name,
       interaction_name
-    ) %>%
+    ) |>
     dplyr::summarise(
       LR_strength = sum(
         prob,
@@ -715,39 +750,36 @@ plot_ccc_lr <- function(
     )
 
 
-
   # Select strongest LR pairs
 
 
   if (is.null(interactions)) {
-
-    interactions <- plot_df %>%
+    interactions <- plot_df |>
       dplyr::group_by(
         interaction_name
-      ) %>%
+      ) |>
       dplyr::summarise(
         mean_strength = mean(
           LR_strength,
           na.rm = TRUE
         ),
         .groups = "drop"
-      ) %>%
+      ) |>
       dplyr::slice_max(
         mean_strength,
         n = top_n,
         with_ties = FALSE
-      ) %>%
+      ) |>
       dplyr::pull(
         interaction_name
       )
   }
 
 
-  plot_df <- plot_df %>%
+  plot_df <- plot_df |>
     dplyr::filter(
       interaction_name %in% interactions
     )
-
 
 
   # Method order
@@ -761,7 +793,6 @@ plot_ccc_lr <- function(
     plot_df$method,
     levels = method_order
   )
-
 
 
   # Plot
@@ -782,13 +813,13 @@ plot_ccc_lr <- function(
       width = 0.7
     ) +
     ggplot2::facet_wrap(
-      ~ pathway_name,
+      ~pathway_name,
       scales = "free_x"
     ) +
     ggplot2::labs(
       x = "Ligand-receptor pair",
       y = "Communication strength",
-      fill = "Normalization method"
+      fill = "Method"
     ) +
     ggplot2::theme_bw() +
     ggplot2::theme(
@@ -802,7 +833,6 @@ plot_ccc_lr <- function(
 
 
   if (!is.null(method_cols)) {
-
     p <- p +
       ggplot2::scale_fill_manual(
         values = method_cols
@@ -811,7 +841,6 @@ plot_ccc_lr <- function(
 
 
   if (log_scale) {
-
     p <- p +
       ggplot2::scale_y_log10()
   }
@@ -821,10 +850,7 @@ plot_ccc_lr <- function(
 }
 
 
-
-
 # PLOT 3: SENDER-RECEIVER COMMUNICATION
-
 
 
 #' Plot CCC sender-receiver communication
@@ -835,18 +861,42 @@ plot_ccc_lr <- function(
 #'
 #' @return A ggplot object.
 #'
+#' @examples
+#' data(norm_ccc_example)
+#' data("CellChatDB.mouse", package = "CellChat")
+#'
+#' ccc_results <- run_ccc(
+#'   spelist = norm_ccc_example,
+#'   celltype_col = "cell_type",
+#'   database = CellChat::CellChatDB.mouse,
+#'   spatial_factors = data.frame(
+#'     ratio = 0.5,
+#'     tol = 12.5
+#'   ),
+#'   interaction_range = 250,
+#'   contact_range = 25,
+#'   nboot = 10,
+#'   min_cells = 5,
+#'   verbose = FALSE
+#' )
+#'
+#' p <- plot_ccc_sender_receiver(
+#'   ccc_result = ccc_results,
+#'   methods = names(ccc_results),
+#'   method_order = names(ccc_results)
+#' )
+#'
+#' p
 #' @export
 plot_ccc_sender_receiver <- function(
-    ccc_result,
-    methods = NULL,
-    method_order = NULL
+  ccc_result,
+  methods = NULL,
+  method_order = NULL
 ) {
-
   df <- .combine_ccc_results(
     ccc_result,
     type = "LR"
   )
-
 
 
   # Methods
@@ -856,7 +906,7 @@ plot_ccc_sender_receiver <- function(
     methods <- names(ccc_result)
   }
 
-  df <- df %>%
+  df <- df |>
     dplyr::filter(
       method %in% methods
     )
@@ -867,16 +917,15 @@ plot_ccc_sender_receiver <- function(
   }
 
 
-
   # Summarise
 
 
-  plot_df <- df %>%
+  plot_df <- df |>
     dplyr::group_by(
       method,
       source,
       target
-    ) %>%
+    ) |>
     dplyr::summarise(
       communication_strength = sum(
         prob,
@@ -891,7 +940,6 @@ plot_ccc_sender_receiver <- function(
     plot_df$method,
     levels = method_order
   )
-
 
 
   # Plot
@@ -909,7 +957,7 @@ plot_ccc_sender_receiver <- function(
       alpha = 0.8
     ) +
     ggplot2::facet_wrap(
-      ~ method
+      ~method
     ) +
     ggplot2::labs(
       x = "Sender cell type",
@@ -928,10 +976,7 @@ plot_ccc_sender_receiver <- function(
 }
 
 
-
-
 # PLOT 4: CELLCHAT CIRCLE NETWORKS
-
 
 
 #' Plot CellChat circle networks
@@ -949,15 +994,56 @@ plot_ccc_sender_receiver <- function(
 #'
 #' @return Invisibly returns NULL.
 #'
+#' @examples
+#'
+#' data(norm_ccc_example)
+#' data("CellChatDB.mouse", package = "CellChat")
+#'
+#' ccc_results <- run_ccc(
+#'   spelist = norm_ccc_example,
+#'   celltype_col = "cell_type",
+#'   database = CellChat::CellChatDB.mouse,
+#'   spatial_factors = data.frame(
+#'     ratio = 0.5,
+#'     tol = 12.5
+#'   ),
+#'   interaction_range = 250,
+#'   contact_range = 25,
+#'   nboot = 10,
+#'   min_cells = 5,
+#'   verbose = FALSE
+#' )
+#'
+#' detected_pathways <- unique(unlist(
+#'   lapply(ccc_results, function(x) {
+#'     x$cellchat@netP$pathways
+#'   })
+#' ))
+#'
+#' if (length(detected_pathways) > 0L) {
+#'   pathway <- detected_pathways[1]
+#'
+#'   for (method in names(ccc_results)) {
+#'     cellchat <- ccc_results[[method]]$cellchat
+#'
+#'     if (!is.null(cellchat) &&
+#'       pathway %in% cellchat@netP$pathways) {
+#'       CellChat::netVisual_aggregate(
+#'         cellchat,
+#'         signaling = pathway,
+#'         layout = "circle"
+#'       )
+#'     }
+#'   }
+#' }
+#'
 #' @export
 plot_ccc_circle <- function(
-    ccc_result,
-    pathways,
-    methods = NULL,
-    method_order = NULL
+  ccc_result,
+  pathways,
+  methods = NULL,
+  method_order = NULL
 ) {
-
-
   # Dependency
 
 
@@ -969,13 +1055,11 @@ plot_ccc_circle <- function(
   }
 
 
-
   # Check result
 
 
   if (!is.list(ccc_result) ||
-      length(ccc_result) == 0) {
-
+    length(ccc_result) == 0) {
     stop(
       "'ccc_result' must be the output from run_ccc().",
       call. = FALSE
@@ -983,13 +1067,11 @@ plot_ccc_circle <- function(
   }
 
 
-
   # Pathways
 
 
   if (missing(pathways) ||
-      length(pathways) == 0) {
-
+    length(pathways) == 0) {
     stop(
       "'pathways' must contain at least one pathway.",
       call. = FALSE
@@ -997,7 +1079,6 @@ plot_ccc_circle <- function(
   }
 
   pathways <- as.character(pathways)
-
 
 
   # Methods
@@ -1014,13 +1095,11 @@ plot_ccc_circle <- function(
 
 
   if (length(methods) == 0) {
-
     stop(
       "No matching normalization methods were found.",
       call. = FALSE
     )
   }
-
 
 
   # Method order
@@ -1035,7 +1114,6 @@ plot_ccc_circle <- function(
   ]
 
 
-
   # Save graphical parameters
 
 
@@ -1047,7 +1125,6 @@ plot_ccc_circle <- function(
     graphics::par(old_par),
     add = TRUE
   )
-
 
 
   # Layout
@@ -1071,23 +1148,18 @@ plot_ccc_circle <- function(
   )
 
 
-
   # Plot
 
 
   for (pathway in pathways) {
-
     for (method_name in methods) {
-
       cellchat <- ccc_result[[method_name]]$cellchat
-
 
 
       # Missing CellChat object
 
 
       if (is.null(cellchat)) {
-
         graphics::plot.new()
 
         graphics::title(
@@ -1101,12 +1173,10 @@ plot_ccc_circle <- function(
       }
 
 
-
       # Pathway not detected
 
 
       if (!pathway %in% cellchat@netP$pathways) {
-
         graphics::plot.new()
 
         graphics::title(
@@ -1120,7 +1190,6 @@ plot_ccc_circle <- function(
 
         next
       }
-
 
 
       # Circle network

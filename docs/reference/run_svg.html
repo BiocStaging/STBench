@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">STBench</a>
 
@@ -18,10 +18,15 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/STBench-workflow.html">Benchmarking normalisation methods with STBench</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/biological-interpretation.html">Biological interpretation and cell-cell communication with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/svg-analysis.html">Spatially variable gene analysis with STBench</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Lahiru-lsb/STBench/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -31,7 +36,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Run spatially variable gene detection</h1>
-
+      <small class="dont-index">Source: <a href="https://github.com/Lahiru-lsb/STBench/blob/HEAD/R/svg_runner.R" class="external-link"><code>R/svg_runner.R</code></a></small>
       <div class="d-none name"><code>run_svg.Rd</code></div>
     </div>
 
@@ -65,12 +70,51 @@
     <p>Named list containing SVG results.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">norm_example</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">svg_results</span> <span class="op">&lt;-</span> <span class="fu">run_svg</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  norm_list <span class="op">=</span> <span class="va">norm_example</span>,</span></span>
+<span class="r-in"><span>  method <span class="op">=</span> <span class="st">"nnSVG"</span>,</span></span>
+<span class="r-in"><span>  n_threads <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">svg_results</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "None"    "SpaNorm"</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu">SummarizedExperiment</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/SummarizedExperiment/man/SummarizedExperiment-class.html" class="external-link">rowData</a></span><span class="op">(</span><span class="va">svg_results</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             sigma.sq     tau.sq       phi     loglik runtime       mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> HSPB7   0.0004910903 0.02677370  8.539111  361.31556   0.096 0.03561908</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> KCNC3   0.0588907271 0.17492278 27.562535 -630.84074   0.146 0.24149342</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> COL25A1 0.0075259833 0.07753537 18.737159 -170.74820   0.137 0.09589966</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> MAL     0.1803866545 0.24361150 33.665686 -889.39771   0.127 0.36704269</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CPXM2   0.0002814358 0.05030879 54.400979   68.97371   0.091 0.05788464</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> TM4SF4  0.0001563186 0.01502439 57.799690  637.14608   0.107 0.01878617</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                var     spcov     prop_sv  loglik_lm    LR_stat rank</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> HSPB7   0.02729862 0.6221541 0.018011884  360.65616  1.3188143   26</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> KCNC3   0.23457624 1.0048891 0.251870514 -654.58969 47.4978949    6</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> COL25A1 0.08512410 0.9046166 0.088477115 -176.13722 10.7780297   14</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> MAL     0.42515362 1.1571392 0.425442070 -935.27388 91.7523443    2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CPXM2   0.05062784 0.2898187 0.005563047   69.11804 -0.2886487   48</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> TM4SF4  0.01519245 0.6655291 0.010297185  637.26597 -0.2397655   45</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 pval         padj</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> HSPB7   5.171579e-01 9.945343e-01</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> KCNC3   4.852474e-11 4.043728e-10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> COL25A1 4.566470e-03 1.630882e-02</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> MAL     0.000000e+00 0.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> CPXM2   1.000000e+00 1.000000e+00</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> TM4SF4  1.000000e+00 1.000000e+00</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Your Name.</p>
+  <p>Developed by Lahiru Boyagoda.</p>
 </div>
 
 <div class="pkgdown-footer-right">

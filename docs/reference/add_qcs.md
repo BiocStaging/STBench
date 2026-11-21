@@ -35,3 +35,17 @@ Spot-level metrics include library size, log library size, number of
 detected genes, and mitochondrial proportion.
 
 Gene-level metrics include mean expression and log mean expression.
+
+## Examples
+
+``` r
+data(spe_example)
+
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+#> Loading required namespace: SpatialExperiment
+#> Warning: No mitochondrial genes matched '^MT-'.
+```

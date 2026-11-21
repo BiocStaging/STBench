@@ -1,6 +1,4 @@
-
 # Individual normalisation methods
-
 
 
 #' No normalisation
@@ -12,7 +10,6 @@
 #' @return A modified object containing logcounts.
 #' @export
 norm_none <- function(spe) {
-
   start_time <- Sys.time()
 
   SingleCellExperiment::logcounts(spe) <-
@@ -44,7 +41,6 @@ norm_none <- function(spe) {
 #' @return Normalised object.
 #' @export
 norm_scran <- function(spe) {
-
   start_time <- Sys.time()
 
   cl <- scran::quickCluster(spe)
@@ -92,16 +88,15 @@ norm_scran <- function(spe) {
 #' @return Normalised object.
 #' @export
 norm_sct <- function(
-    spe,
-    seed = 123,
-    vst_flavor = "v2",
-    verbosity = 1,
-    ...
+  spe,
+  seed = 123,
+  vst_flavor = "v2",
+  verbosity = 1,
+  ...
 ) {
-
   start_time <- Sys.time()
 
-  set.seed(seed)
+  withr::local_seed(seed)
 
   vst_res <- sctransform::vst(
     SingleCellExperiment::counts(spe),
@@ -115,8 +110,7 @@ norm_sct <- function(
   )
 
   spe <- spe[
-    rownames(vst_res$y),
-    ,
+    rownames(vst_res$y), ,
     drop = FALSE
   ]
 
@@ -150,10 +144,9 @@ norm_sct <- function(
 #' @return Normalised object.
 #' @export
 norm_giotto <- function(
-    spe,
-    ...
+  spe,
+  ...
 ) {
-
   start_time <- Sys.time()
 
   giotto_obj <- Giotto::createGiottoObject(
@@ -202,14 +195,13 @@ norm_giotto <- function(
 #' @return Normalised object.
 #' @export
 norm_spanorm <- function(
-    spe,
-    sample_p = NULL,
-    df_tps = 6,
-    adj_method = "logpac",
-    seed = 123,
-    ...
+  spe,
+  sample_p = NULL,
+  df_tps = 6,
+  adj_method = "logpac",
+  seed = 123,
+  ...
 ) {
-
   start_time <- Sys.time()
 
   if (!is.null(SingleCellExperiment::sizeFactors(spe))) {
@@ -223,7 +215,7 @@ norm_spanorm <- function(
     )
   }
 
-  set.seed(seed)
+  withr::local_seed(seed)
 
   spe <- SpaNorm::SpaNorm(
     spe,

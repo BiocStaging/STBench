@@ -30,3 +30,12 @@ number of detected genes, and mitochondrial proportion.
 Gene-level metrics include mean expression and log mean
 expression.
 }
+\examples{
+data(spe_example)
+
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+}

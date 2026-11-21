@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">STBench</a>
 
@@ -18,10 +18,15 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/STBench-workflow.html">Benchmarking normalisation methods with STBench</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/biological-interpretation.html">Biological interpretation and cell-cell communication with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/svg-analysis.html">Spatially variable gene analysis with STBench</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Lahiru-lsb/STBench/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -31,7 +36,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract SVG statistics for selected genes</h1>
-
+      <small class="dont-index">Source: <a href="https://github.com/Lahiru-lsb/STBench/blob/HEAD/R/svg_marker.R" class="external-link"><code>R/svg_marker.R</code></a></small>
       <div class="d-none name"><code>extract_svg_stats.Rd</code></div>
     </div>
 
@@ -76,7 +81,33 @@
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Data frame.</p>
+    <p>Data frame.
+#' @examples
+# Create a small SpatialExperiment object
+counts &lt;- matrix(
+  1:12,
+  nrow = 3,
+  dimnames = list(
+    c("GeneA", "GeneB", "GeneC"),
+    paste0("Cell", seq_len(4))
+  )
+)</p>
+<p>spe &lt;- SpatialExperiment::SpatialExperiment(
+  assays = list(counts = counts)
+)</p>
+<p>SummarizedExperiment::rowData(spe)$LR_stat &lt;- c(
+  2.5, 4.0, 1.2
+)</p>
+<p># Compare SVG statistics across normalization methods
+svg_norm &lt;- list(
+  None = spe,
+  scran = spe
+)</p>
+<p>result &lt;- extract_svg_stats(
+  svg_norm = svg_norm,
+  genes = c("GeneA", "GeneB")
+)</p>
+<p>print(result)</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -84,7 +115,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Your Name.</p>
+  <p>Developed by Lahiru Boyagoda.</p>
 </div>
 
 <div class="pkgdown-footer-right">

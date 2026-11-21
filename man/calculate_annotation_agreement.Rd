@@ -33,3 +33,15 @@ Calculate the proportion of spatial locations receiving the
 same cell-type annotation between each pair of normalisation
 methods.
 }
+\examples{
+data(norm_example)
+
+agreement <- calculate_annotation_agreement(
+  norm_list = norm_example,
+  annotation_col = "cell_type",
+  method_order = NULL,
+  remove_na = TRUE
+)
+
+agreement
+}

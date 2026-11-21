@@ -55,3 +55,37 @@ Point size represents gene count, colour represents
 enrichment significance, and shape represents the
 normalisation method.
 }
+\examples{
+data(norm_ccc_example)
+
+go_result <- calculate_go(
+  norm_list = norm_ccc_example,
+  cluster_col = "layer_guess",
+  methods = names(norm_ccc_example),
+  assay_name = "logcounts",
+  OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.4,
+  min_spots = 10,
+  min_genes = 5,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  readable = TRUE,
+  test_type = "t"
+)
+
+p_go <- plot_go(
+  go_result = go_result,
+  top_n = 5,
+  method_col = "method",
+  cluster_col = "cluster",
+  point_size_range = c(2, 7),
+  theme_name = "classic",
+  ncol = 2
+)
+
+p_go$plot
+}

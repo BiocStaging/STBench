@@ -53,3 +53,19 @@ Produces a boxplot and spatial maps.
 By default, sctransform and Giotto are excluded because their
 transformed expression values may not represent log1p-transformed
 non-negative expression.
+
+## Examples
+
+``` r
+data(norm_example)
+
+p_ls <- plot_library_size_comparison(
+  norm_example,
+  methods = NULL,
+  assay_name = "logcounts",
+  point_size = 0.5,
+  theme_name = "classic"
+)
+
+p_ls$plot
+```

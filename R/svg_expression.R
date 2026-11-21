@@ -1,7 +1,4 @@
-
-
 # Spatial expression plots
-
 
 
 #' Plot spatial expression across normalisation methods
@@ -34,21 +31,38 @@
 #' @return A list containing plotting data, individual
 #'   gene plots when unscaled, and the combined plot.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' genes <- head(rownames(norm_example[[1]]), 2)
+#'
+#' p_expr <- plot_spatial_expression(
+#'   norm_list = norm_example,
+#'   genes = genes,
+#'   assay_name = "logcounts",
+#'   scale_expr = TRUE,
+#'   scale_by = "gene",
+#'   point_size = 0.5,
+#'   colour_option = "magma",
+#'   ncol_genes = 1,
+#'   theme_name = "classic"
+#' )
+#'
+#' p_expr$plot
 #' @export
 plot_spatial_expression <- function(
-    norm_list,
-    genes,
-    assay_name = "logcounts",
-    method_order = NULL,
-    scale_expr = TRUE,
-    point_size = 0.5,
-    colour_option = "magma",
-    ncol_genes = 1,
-    theme_name = "classic",
-    methods = NULL,
-    scale_by = c("gene", "gene_method")
+  norm_list,
+  genes,
+  assay_name = "logcounts",
+  method_order = NULL,
+  scale_expr = TRUE,
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic",
+  methods = NULL,
+  scale_by = c("gene", "gene_method")
 ) {
-
   # ----------------------------------------------------------
   # Resolve selected methods
   # ----------------------------------------------------------
@@ -78,7 +92,6 @@ plot_spatial_expression <- function(
   methods <- unique(methods)
 
   if (!is.null(method_order)) {
-
     unknown_order <- setdiff(
       method_order,
       names(norm_list)
@@ -105,7 +118,6 @@ plot_spatial_expression <- function(
   df_list <- list()
 
   for (method in methods) {
-
     spe <- norm_list[[method]]
 
 
@@ -115,9 +127,8 @@ plot_spatial_expression <- function(
 
     if (
       !assay_name %in%
-      SummarizedExperiment::assayNames(spe)
+        SummarizedExperiment::assayNames(spe)
     ) {
-
       warning(
         "Assay '",
         assay_name,
@@ -174,14 +185,12 @@ plot_spatial_expression <- function(
     # --------------------------------------------------------
 
     for (gene in genes_use) {
-
       temp <- data.frame(
         x = coords[, 1],
         y = coords[, 2],
         expression = as.numeric(
           expr_mat[
-            gene,
-            ,
+            gene, ,
             drop = TRUE
           ]
         ),
@@ -233,13 +242,11 @@ plot_spatial_expression <- function(
   # ==========================================================
 
   if (scale_expr) {
-
     # --------------------------------------------------------
     # Scale each gene across all selected methods
     # --------------------------------------------------------
 
     if (scale_by == "gene") {
-
       df_scaled <- df |>
         dplyr::group_by(
           .data$gene
@@ -250,7 +257,6 @@ plot_spatial_expression <- function(
           )
         ) |>
         dplyr::ungroup()
-
     }
 
 
@@ -259,7 +265,6 @@ plot_spatial_expression <- function(
     # --------------------------------------------------------
 
     if (scale_by == "gene_method") {
-
       df_scaled <- df |>
         dplyr::group_by(
           .data$gene,
@@ -271,7 +276,6 @@ plot_spatial_expression <- function(
           )
         ) |>
         dplyr::ungroup()
-
     }
 
 
@@ -335,10 +339,8 @@ plot_spatial_expression <- function(
   gene_plots <- list()
 
   for (gene_use in genes) {
-
     gene_df <- df[
-      as.character(df$gene) == gene_use,
-      ,
+      as.character(df$gene) == gene_use, ,
       drop = FALSE
     ]
 
@@ -373,7 +375,7 @@ plot_spatial_expression <- function(
         size = point_size
       ) +
       ggplot2::facet_wrap(
-        ~ method,
+        ~method,
         nrow = 1
       ) +
       ggplot2::coord_fixed() +

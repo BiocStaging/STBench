@@ -1,6 +1,4 @@
-
 # SVG marker gene analysis
-
 
 
 #' Extract SVG statistics for selected genes
@@ -12,15 +10,46 @@
 #' @param method_order Optional method order.
 #'
 #' @return Data frame.
+#' @examples
+#' # Create a small SpatialExperiment object
+#' counts <- matrix(
+#'   1:12,
+#'   nrow = 3,
+#'   dimnames = list(
+#'     c("GeneA", "GeneB", "GeneC"),
+#'     paste0("Cell", seq_len(4))
+#'   )
+#' )
+#'
+#' spe <- SpatialExperiment::SpatialExperiment(
+#'   assays = list(counts = counts)
+#' )
+#'
+#' SummarizedExperiment::rowData(spe)$LR_stat <- c(
+#'   2.5, 4.0, 1.2
+#' )
+#'
+#' # Compare SVG statistics across normalization methods
+#' svg_norm <- list(
+#'   None = spe,
+#'   scran = spe
+#' )
+#'
+#' result <- extract_svg_stats(
+#'   svg_norm = svg_norm,
+#'   genes = c("GeneA", "GeneB")
+#' )
+#'
+#' print(result)
+#'
 #' @export
 extract_svg_stats <- function(
-    svg_norm,
-    genes,
-    stat = "LR_stat",
-    gene_id = "rownames",
-    method_order = NULL
+  svg_norm,
+  genes,
+  stat = "LR_stat",
+  gene_id = "rownames",
+  method_order = NULL
 ) {
-
   methods <- .resolve_methods(
     svg_norm,
     method_order
@@ -29,7 +58,6 @@ extract_svg_stats <- function(
   out <- lapply(
     methods,
     function(method) {
-
       spe <- svg_norm[[method]]
 
       rd <- .extract_rowdata(
@@ -38,7 +66,6 @@ extract_svg_stats <- function(
       )
 
       if (!stat %in% colnames(rd)) {
-
         stop(
           "Statistic '",
           stat,
@@ -100,21 +127,20 @@ extract_svg_stats <- function(
 #' @return A list containing data and plot.
 #' @export
 plot_svg_stat <- function(
-    svg_norm,
-    genes,
-    stat = "LR_stat",
-    method_order = NULL,
-    method_colors = NULL,
-    transform = c(
-      "log1p",
-      "log",
-      "none"
-    ),
-    point_size = 3,
-    gene_id = "rownames",
-    theme_name = "classic"
+  svg_norm,
+  genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  transform = c(
+    "log1p",
+    "log",
+    "none"
+  ),
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "classic"
 ) {
-
   transform <- match.arg(transform)
 
   df <- extract_svg_stats(
@@ -126,7 +152,6 @@ plot_svg_stat <- function(
   )
 
   if (transform == "log1p") {
-
     df$value <- log1p(
       df$svg_stat
     )
@@ -136,12 +161,9 @@ plot_svg_stat <- function(
       stat,
       ")"
     )
-
   } else if (transform == "log") {
-
     df <- df[
-      df$svg_stat > 0,
-      ,
+      df$svg_stat > 0, ,
       drop = FALSE
     ]
 
@@ -155,9 +177,7 @@ plot_svg_stat <- function(
     #   ")"
     # )
     y_lab <- "log (LR statistic)"
-
   } else {
-
     df$value <- df$svg_stat
     y_lab <- stat
   }
@@ -174,11 +194,11 @@ plot_svg_stat <- function(
       size = point_size
     ) +
     ggplot2::facet_wrap(
-      ~ gene,
+      ~gene,
       scales = "free_y"
     ) +
     ggplot2::labs(
-      x = NULL,#"Normalisation method",
+      x = NULL, # "Normalisation method",
       y = y_lab
     ) +
     .get_plot_theme(
@@ -196,7 +216,6 @@ plot_svg_stat <- function(
     )
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_colour_manual(
         values = method_colors
@@ -220,18 +239,28 @@ plot_svg_stat <- function(
 #' @param gene_id Gene identifier.
 #' @param theme_name Plot theme.
 #'
+#' @examples
+#' data(svg_example)
+#'
+#' marker_genes <- head(rownames(svg_example[[1]]), 5)
+#'
+#' p <- plot_svg_rank(
+#'   svg_norm = svg_example,
+#'   genes = marker_genes
+#' )
+#'
+#' p$plot
 #' @return List containing data and plot.
 #' @export
 plot_svg_rank <- function(
-    svg_norm,
-    genes,
-    method_order = NULL,
-    method_colors = NULL,
-    point_size = 3,
-    gene_id = "rownames",
-    theme_name = "classic"
+  svg_norm,
+  genes,
+  method_order = NULL,
+  method_colors = NULL,
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "classic"
 ) {
-
   df <- extract_svg_stats(
     svg_norm = svg_norm,
     genes = genes,
@@ -256,7 +285,7 @@ plot_svg_rank <- function(
       size = point_size
     ) +
     ggplot2::facet_wrap(
-      ~ gene
+      ~gene
     ) +
     ggplot2::scale_y_reverse() +
     ggplot2::labs(
@@ -278,7 +307,6 @@ plot_svg_rank <- function(
     )
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_colour_manual(
         values = method_colors
@@ -290,7 +318,6 @@ plot_svg_rank <- function(
     plot = p
   )
 }
-
 
 
 #' Plot SVG Rank Against SVG Statistic
@@ -316,22 +343,34 @@ plot_svg_rank <- function(
 #'
 #' @return A list containing data and plot.
 #'
+#' @examples
+#' data(svg_example)
+#'
+#' marker_genes <- head(rownames(svg_example[[1]]), 5)
+#'
+#' p <- plot_svg_rank_vs_stat(
+#'   svg_norm = svg_example,
+#'   genes = marker_genes,
+#'   stat = "LR_stat",
+#'   transform = "log"
+#' )
+#'
+#' p$plot
 #' @export
 plot_svg_rank_vs_stat <- function(
-    svg_norm,
-    genes,
-    stat = "LR_stat",
-    method_order = NULL,
-    method_colors = NULL,
-    transform = c("log1p", "log", "none"),
-    scales = c("fixed", "free", "free_x", "free_y"),
-    ncol = NULL,
-    nrow = NULL,
-    point_size = 3,
-    gene_id = "rownames",
-    theme_name = "classic"
+  svg_norm,
+  genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  transform = c("log1p", "log", "none"),
+  scales = c("fixed", "free", "free_x", "free_y"),
+  ncol = NULL,
+  nrow = NULL,
+  point_size = 3,
+  gene_id = "rownames",
+  theme_name = "classic"
 ) {
-
   transform <- match.arg(transform)
   scales <- match.arg(scales)
 
@@ -369,7 +408,6 @@ plot_svg_rank_vs_stat <- function(
   # Apply transformation
 
   if (transform == "log1p") {
-
     if (any(df$svg_stat_stat < -1, na.rm = TRUE)) {
       stop("log1p requires SVG statistics >= -1.")
     }
@@ -377,22 +415,17 @@ plot_svg_rank_vs_stat <- function(
     df$value <- log1p(df$svg_stat_stat)
 
     x_lab <- paste0("log1p(", stat, ")")
-
   } else if (transform == "log") {
-
     df <- df[
       !is.na(df$svg_stat_stat) &
-        df$svg_stat_stat > 0,
-      ,
+        df$svg_stat_stat > 0, ,
       drop = FALSE
     ]
 
     df$value <- log(df$svg_stat_stat)
 
     x_lab <- paste0("log(", stat, ")")
-
   } else {
-
     df$value <- df$svg_stat_stat
     x_lab <- stat
   }
@@ -401,8 +434,7 @@ plot_svg_rank_vs_stat <- function(
 
   df <- df[
     is.finite(df$value) &
-      is.finite(df$rank),
-    ,
+      is.finite(df$rank), ,
     drop = FALSE
   ]
 
@@ -416,28 +448,22 @@ plot_svg_rank_vs_stat <- function(
       colour = .data$method
     )
   ) +
-
     ggplot2::geom_point(
       size = point_size
     ) +
-
     ggplot2::facet_wrap(
-      ~ gene,
+      ~gene,
       scales = scales,
       ncol = ncol,
       nrow = nrow
     ) +
-
     ggplot2::scale_y_reverse() +
-
     ggplot2::labs(
       x = x_lab,
       y = "SVG rank",
       colour = "Normalisation method"
     ) +
-
     .get_plot_theme(theme_name) +
-
     ggplot2::theme(
       strip.background = ggplot2::element_blank(),
       strip.text = ggplot2::element_text(
@@ -449,7 +475,6 @@ plot_svg_rank_vs_stat <- function(
   # Optional method colours
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_colour_manual(
         values = method_colors
@@ -463,9 +488,6 @@ plot_svg_rank_vs_stat <- function(
     plot = p
   )
 }
-
-
-
 
 
 #' Plot SVG Rank Correlation Across Normalisation Methods
@@ -489,29 +511,38 @@ plot_svg_rank_vs_stat <- function(
 #' @return A list containing the correlation matrix,
 #'   heatmap data, shared gene ranks, and ggplot object.
 #'
+#' @examples
+#' data(svg_example)
+#'
+#' p <- plot_svg_rank_correlation(
+#'   svg_norm = svg_example,
+#'   show_values = TRUE,
+#'   digits = 2
+#' )
+#'
+#' p$plot
 #' @export
 plot_svg_rank_correlation <- function(
-    svg_norm,
-    methods = NULL,
-    gene_id = "rownames",
-    method_order = NULL,
-    method_colors = c(
-      "#B2182B",
-      "#F7F7F7",
-      "#2166AC"
-    ),
-    show_values = TRUE,
-    digits = 2,
-    theme_name = "classic"
+  svg_norm,
+  methods = NULL,
+  gene_id = "rownames",
+  method_order = NULL,
+  method_colors = c(
+    "#B2182B",
+    "#F7F7F7",
+    "#2166AC"
+  ),
+  show_values = TRUE,
+  digits = 2,
+  theme_name = "classic"
 ) {
-
   # Validate method names
 
   if (
     is.null(names(svg_norm)) ||
-    anyNA(names(svg_norm)) ||
-    any(!nzchar(names(svg_norm))) ||
-    anyDuplicated(names(svg_norm))
+      anyNA(names(svg_norm)) ||
+      any(!nzchar(names(svg_norm))) ||
+      anyDuplicated(names(svg_norm))
   ) {
     stop(
       "svg_norm must have unique, non-empty method names."
@@ -527,10 +558,9 @@ plot_svg_rank_correlation <- function(
   methods <- unique(methods)
 
   if (!is.null(method_order)) {
-
     if (
       length(method_order) != length(methods) ||
-      !setequal(method_order, methods)
+        !setequal(method_order, methods)
     ) {
       stop(
         "method_order must contain all selected methods."
@@ -542,7 +572,7 @@ plot_svg_rank_correlation <- function(
 
   if (
     length(methods) < 2L ||
-    any(!methods %in% names(svg_norm))
+      any(!methods %in% names(svg_norm))
   ) {
     stop(
       "At least two valid normalisation methods are required."
@@ -554,7 +584,6 @@ plot_svg_rank_correlation <- function(
   rank_list <- lapply(
     methods,
     function(method) {
-
       result <- svg_norm[[method]]
 
       if (gene_id == "rownames") {
@@ -565,8 +594,8 @@ plot_svg_rank_correlation <- function(
 
       if (
         is.null(genes) ||
-        anyNA(genes) ||
-        anyDuplicated(genes)
+          anyNA(genes) ||
+          anyDuplicated(genes)
       ) {
         stop(
           "Valid unique gene identifiers are required for: ",
@@ -596,7 +625,6 @@ plot_svg_rank_correlation <- function(
   names(rank_wide)[2] <- methods[1]
 
   for (i in seq_along(methods)[-1]) {
-
     temp <- rank_list[[i]]
     names(temp)[2] <- methods[i]
 
@@ -618,8 +646,7 @@ plot_svg_rank_correlation <- function(
   valid <- rowSums(!is.finite(rank_matrix)) == 0L
 
   rank_wide <- rank_wide[
-    valid,
-    ,
+    valid, ,
     drop = FALSE
   ]
 
@@ -661,8 +688,7 @@ plot_svg_rank_correlation <- function(
   )
 
   correlation_data <- correlation_data[
-    correlation_data$row_id >= correlation_data$col_id,
-    ,
+    correlation_data$row_id >= correlation_data$col_id, ,
     drop = FALSE
   ]
 
@@ -688,25 +714,19 @@ plot_svg_rank_correlation <- function(
       fill = .data$correlation
     )
   ) +
-
     ggplot2::geom_tile(
       colour = "white",
-      linewidth = 0.5,alpha=0.8
+      linewidth = 0.5, alpha = 0.8
     ) +
-
     ggplot2::scale_fill_viridis_c(
       name = "Spearman\ncorrelation"
     ) +
-
     ggplot2::coord_fixed() +
-
     ggplot2::labs(
       x = NULL,
       y = NULL
     ) +
-
     .get_plot_theme(theme_name) +
-
     ggplot2::theme(
       panel.grid = ggplot2::element_blank(),
       axis.text.x = ggplot2::element_text(
@@ -719,7 +739,6 @@ plot_svg_rank_correlation <- function(
   # Add correlation coefficients
 
   if (show_values) {
-
     p <- p +
       ggplot2::geom_text(
         ggplot2::aes(
@@ -766,22 +785,47 @@ plot_svg_rank_correlation <- function(
 #'
 #' @return A list containing t-test results and a ggplot object.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' genes <- head(rownames(norm_example[[1]]), 3)
+#'
+#' region <- as.character(
+#'   SummarizedExperiment::colData(norm_example[[1]])$cell_type
+#' )
+#'
+#' marker_labels <- rep(
+#'   names(sort(table(region), decreasing = TRUE))[1],
+#'   length(genes)
+#' )
+#'
+#' p_marker <- plot_marker_ttest(
+#'   norm = norm_example,
+#'   genes = genes,
+#'   marker_labels = marker_labels,
+#'   region_col = "cell_type",
+#'   assay_name = "logcounts",
+#'   scales = "free_y",
+#'   ncol = 3,
+#'   theme_name = "bw"
+#' )
+#'
+#' p_marker$plot
 #' @export
 plot_marker_ttest <- function(
-    norm,
-    genes,
-    marker_labels,
-    region_col = "cell_type",
-    assay_name = "logcounts",
-    method_order = NULL,
-    method_colors = NULL,
-    point_size = 3,
-    scales = "free_y",
-    ncol = NULL,
-    nrow = NULL,
-    theme_name = "classic"
+  norm,
+  genes,
+  marker_labels,
+  region_col = "cell_type",
+  assay_name = "logcounts",
+  method_order = NULL,
+  method_colors = NULL,
+  point_size = 3,
+  scales = "free_y",
+  ncol = NULL,
+  nrow = NULL,
+  theme_name = "classic"
 ) {
-
   scales <- match.arg(
     scales,
     c("fixed", "free", "free_x", "free_y")
@@ -799,9 +843,9 @@ plot_marker_ttest <- function(
 
   if (
     is.null(names(norm)) ||
-    anyNA(names(norm)) ||
-    any(!nzchar(names(norm))) ||
-    anyDuplicated(names(norm))
+      anyNA(names(norm)) ||
+      any(!nzchar(names(norm))) ||
+      anyDuplicated(names(norm))
   ) {
     stop("norm must have unique, non-empty method names.")
   }
@@ -809,9 +853,8 @@ plot_marker_ttest <- function(
   methods <- names(norm)
 
   if (!is.null(method_order)) {
-
     if (!setequal(method_order, methods) ||
-        length(method_order) != length(methods)) {
+      length(method_order) != length(methods)) {
       stop("method_order must contain all methods exactly once.")
     }
 
@@ -821,7 +864,6 @@ plot_marker_ttest <- function(
   # Perform t-tests
 
   results <- lapply(methods, function(method) {
-
     spe <- norm[[method]]
 
     if (!region_col %in% colnames(
@@ -834,7 +876,7 @@ plot_marker_ttest <- function(
     }
 
     if (!assay_name %in%
-        SummarizedExperiment::assayNames(spe)) {
+      SummarizedExperiment::assayNames(spe)) {
       stop(
         "Assay '", assay_name,
         "' not found for method: ", method
@@ -852,7 +894,6 @@ plot_marker_ttest <- function(
 
     dplyr::bind_rows(
       lapply(seq_along(genes), function(i) {
-
         gene <- genes[i]
         marker <- marker_labels[i]
 
@@ -944,25 +985,20 @@ plot_marker_ttest <- function(
       colour = .data$method
     )
   ) +
-
     ggplot2::geom_point(
       size = point_size
     ) +
-
     ggplot2::facet_wrap(
-      ~ gene,
+      ~gene,
       scales = scales,
       ncol = ncol,
       nrow = nrow
     ) +
-
     ggplot2::labs(
-      x =NULL,# "Method",
+      x = NULL, # "Method",
       y = "|t-statistic|"
     ) +
-
     .get_plot_theme(theme_name) +
-
     ggplot2::theme(
       axis.text.x = ggplot2::element_text(
         angle = 45,
@@ -990,4 +1026,3 @@ plot_marker_ttest <- function(
     )
   )
 }
-

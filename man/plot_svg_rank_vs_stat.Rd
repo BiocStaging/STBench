@@ -55,3 +55,17 @@ SVG ranks for selected genes across normalisation methods.
 Each point represents a normalisation method, with
 genes displayed in separate facets.
 }
+\examples{
+data(svg_example)
+
+marker_genes <- head(rownames(svg_example[[1]]), 5)
+
+p <- plot_svg_rank_vs_stat(
+  svg_norm = svg_example,
+  genes = marker_genes,
+  stat = "LR_stat",
+  transform = "log"
+)
+
+p$plot
+}

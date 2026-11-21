@@ -1,6 +1,4 @@
-
 # Cell-type annotation
-
 
 
 #' Run cell-type annotation
@@ -29,18 +27,40 @@
 #'
 #' @return Named list of annotated SpatialExperiment objects.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' # Use a subset of cells as an illustrative reference
+#' ref <- norm_example$None[, seq_len(100)]
+#' labels <- as.character(ref$cell_type)
+#'
+#' # Annotate the remaining cells
+#' query <- lapply(
+#'   norm_example,
+#'   function(spe) spe[, seq.int(101, ncol(spe))]
+#' )
+#'
+#' annotated_norm <- run_annotation(
+#'   norm_list = query,
+#'   ref = ref,
+#'   labels = labels,
+#'   method = "SingleR",
+#'   label_name = "SingleR_label",
+#'   pruned_label_name = "SingleR_pruned_label",
+#'   de.method = "classic"
+#' )
+#'
+#' table(annotated_norm$None$SingleR_label)
 #' @export
 run_annotation <- function(
-    norm_list,
-    ref,
-    labels,
-    method = "SingleR",
-    label_name = "SingleR_label",
-    pruned_label_name = "SingleR_pruned_label",
-    ...
+  norm_list,
+  ref,
+  labels,
+  method = "SingleR",
+  label_name = "SingleR_label",
+  pruned_label_name = "SingleR_pruned_label",
+  ...
 ) {
-
-
   # Check input
 
 
@@ -50,7 +70,6 @@ run_annotation <- function(
 
 
   if (method != "SingleR") {
-
     stop(
       "Currently supported annotation method: SingleR"
     )
@@ -58,12 +77,10 @@ run_annotation <- function(
 
 
   if (length(labels) != ncol(ref)) {
-
     stop(
       "Length of 'labels' must equal the number of columns in 'ref'."
     )
   }
-
 
 
   # Run annotation
@@ -72,7 +89,6 @@ run_annotation <- function(
   out <- lapply(
     names(norm_list),
     function(method_name) {
-
       message("Running SingleR: ", method_name)
 
       spe <- norm_list[[method_name]]
@@ -88,17 +104,14 @@ run_annotation <- function(
       )
 
 
-
       # Check number of predictions
 
 
       if (nrow(results) != ncol(spe)) {
-
         stop(
           "Number of SingleR predictions does not match the number of spatial locations."
         )
       }
-
 
 
       # Add labels to colData
@@ -110,18 +123,15 @@ run_annotation <- function(
         )
 
 
-
       # Add pruned labels
 
 
       if ("pruned.labels" %in% colnames(results)) {
-
         SummarizedExperiment::colData(spe)[[pruned_label_name]] <-
           as.character(
             results$pruned.labels
           )
       }
-
 
 
       # Return SpatialExperiment
@@ -141,10 +151,7 @@ run_annotation <- function(
 }
 
 
-
-
 # Spatial cell-type annotation plot
-
 
 
 #' Plot spatial cell-type annotations
@@ -169,18 +176,28 @@ run_annotation <- function(
 #'
 #' @return A list containing plotting data and plot.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' p <- plot_spatial_annotation(
+#'   norm_list = norm_example,
+#'   annotation_col = "cell_type",
+#'   point_size = 0.5,
+#'   theme_name = "classic"
+#' )
+#'
+#' p$plot
 #' @export
 
 plot_spatial_annotation <- function(
-    norm_list,
-    annotation_col = "SingleR_label",
-    method_order = NULL,
-    point_size = 0.5,
-    palette = NULL,
-    ncol = 1,
-    theme_name = "classic"
+  norm_list,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  point_size = 0.5,
+  palette = NULL,
+  ncol = 1,
+  theme_name = "classic"
 ) {
-
   # Resolve methods
 
   methods <- .resolve_methods(
@@ -199,7 +216,6 @@ plot_spatial_annotation <- function(
   df_list <- list()
 
   for (method in methods) {
-
     spe <- norm_list[[method]]
 
     # Check annotation column
@@ -207,7 +223,6 @@ plot_spatial_annotation <- function(
     cd <- SummarizedExperiment::colData(spe)
 
     if (!annotation_col %in% colnames(cd)) {
-
       warning(
         "Annotation column '",
         annotation_col,
@@ -233,11 +248,9 @@ plot_spatial_annotation <- function(
 
     if (nrow(coords) != ncol(spe)) {
       stop(
-        paste0(
           "Number of spatial coordinates does not match ",
           "the number of columns in the SpatialExperiment."
-        )
-      )
+          )
     }
 
     # Construct data frame
@@ -295,7 +308,7 @@ plot_spatial_annotation <- function(
       size = point_size
     ) +
     ggplot2::facet_wrap(
-      ~ method,
+      ~method,
       ncol = ncol
     ) +
     ggplot2::coord_fixed() +
@@ -322,7 +335,6 @@ plot_spatial_annotation <- function(
   # Optional colour palette
 
   if (!is.null(palette)) {
-
     viridis_options <- c(
       "viridis" = "D",
       "magma" = "A",
@@ -336,19 +348,16 @@ plot_spatial_annotation <- function(
 
     if (
       is.character(palette) &&
-      length(palette) == 1 &&
-      !is.na(palette) &&
-      palette %in% names(viridis_options)
+        length(palette) == 1 &&
+        !is.na(palette) &&
+        palette %in% names(viridis_options)
     ) {
-
       p <- p +
         ggplot2::scale_colour_viridis_d(
           option = viridis_options[[palette]],
           na.value = "grey80"
         )
-
     } else {
-
       p <- p +
         ggplot2::scale_colour_manual(
           values = palette,
@@ -371,10 +380,7 @@ plot_spatial_annotation <- function(
 }
 
 
-
-
 # Cell-type proportion plot
-
 
 
 #' Plot cell-type proportions
@@ -395,18 +401,30 @@ plot_spatial_annotation <- function(
 #' @param theme_name Plot theme. One of `"classic"`, `"bw"`,
 #'   `"minimal"`, or `"gray"`.
 #'
-#' @return A list containing summary data and plot.
 #'
-
+#' @return A list containing summary data and plot.
+#' @examples
+#' data(norm_example)
+#'
+#' p <- plot_celltype_proportion(
+#'   norm_list = norm_example,
+#'   annotation_col = "cell_type",
+#'   method_order = NULL,
+#'   palette = "turbo",
+#'   show = "proportion",
+#'   theme_name = "classic"
+#' )
+#'
+#' p$plot
+#' @export
 plot_celltype_proportion <- function(
-    norm_list,
-    annotation_col = "SingleR_label",
-    method_order = NULL,
-    palette = NULL,
-    show = "proportion",
-    theme_name = "classic"
+  norm_list,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  palette = NULL,
+  show = "proportion",
+  theme_name = "classic"
 ) {
-
   # Resolve methods
 
   methods <- .resolve_methods(
@@ -425,7 +443,6 @@ plot_celltype_proportion <- function(
   df_list <- list()
 
   for (method in methods) {
-
     spe <- norm_list[[method]]
 
     cd <- SummarizedExperiment::colData(spe)
@@ -433,7 +450,6 @@ plot_celltype_proportion <- function(
     # Check annotation column
 
     if (!annotation_col %in% colnames(cd)) {
-
       warning(
         "Annotation column '",
         annotation_col,
@@ -479,8 +495,7 @@ plot_celltype_proportion <- function(
 
   df <- df[
     !is.na(df$cell_type) &
-      df$cell_type != "",
-    ,
+      df$cell_type != "", ,
     drop = FALSE
   ]
 
@@ -520,7 +535,6 @@ plot_celltype_proportion <- function(
   # Proportion plot
 
   if (show == "proportion") {
-
     p <- ggplot2::ggplot(
       summary_df,
       ggplot2::aes(
@@ -538,9 +552,7 @@ plot_celltype_proportion <- function(
         y = "Cell-type proportion",
         fill = "Cell type"
       )
-
   } else if (show == "count") {
-
     # Count plot
 
     p <- ggplot2::ggplot(
@@ -557,9 +569,7 @@ plot_celltype_proportion <- function(
         y = "Number of spots",
         fill = "Cell type"
       )
-
   } else {
-
     stop(
       "'show' must be either 'proportion' or 'count'."
     )
@@ -583,7 +593,6 @@ plot_celltype_proportion <- function(
   # Optional colour palette
 
   if (!is.null(palette)) {
-
     viridis_options <- c(
       "viridis" = "D",
       "magma" = "A",
@@ -597,19 +606,16 @@ plot_celltype_proportion <- function(
 
     if (
       is.character(palette) &&
-      length(palette) == 1 &&
-      !is.na(palette) &&
-      palette %in% names(viridis_options)
+        length(palette) == 1 &&
+        !is.na(palette) &&
+        palette %in% names(viridis_options)
     ) {
-
       p <- p +
         ggplot2::scale_fill_viridis_d(
           option = viridis_options[[palette]],
           na.value = "grey80"
         )
-
     } else {
-
       p <- p +
         ggplot2::scale_fill_manual(
           values = palette,
@@ -627,13 +633,7 @@ plot_celltype_proportion <- function(
 }
 
 
-
-
-
-
-
 # Pairwise annotation agreement
-
 
 
 #' Calculate pairwise cell-type annotation agreement
@@ -653,16 +653,24 @@ plot_celltype_proportion <- function(
 #'   calculating agreement.
 #'
 #' @return A data frame containing pairwise annotation agreement.
+#' @examples
+#' data(norm_example)
 #'
+#' agreement <- calculate_annotation_agreement(
+#'   norm_list = norm_example,
+#'   annotation_col = "cell_type",
+#'   method_order = NULL,
+#'   remove_na = TRUE
+#' )
+#'
+#' agreement
 #' @export
 calculate_annotation_agreement <- function(
-    norm_list,
-    annotation_col = "SingleR_label",
-    method_order = NULL,
-    remove_na = TRUE
+  norm_list,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE
 ) {
-
-
   # Resolve methods
 
 
@@ -672,12 +680,10 @@ calculate_annotation_agreement <- function(
   )
 
   if (length(methods) < 2) {
-
     stop(
       "At least two normalisation methods are required."
     )
   }
-
 
 
   # Extract annotations
@@ -686,7 +692,6 @@ calculate_annotation_agreement <- function(
   annotation_list <- lapply(
     methods,
     function(method) {
-
       spe <- norm_list[[method]]
 
       cd <- SummarizedExperiment::colData(
@@ -695,9 +700,8 @@ calculate_annotation_agreement <- function(
 
       if (
         !annotation_col %in%
-        colnames(cd)
+          colnames(cd)
       ) {
-
         stop(
           "Annotation column '",
           annotation_col,
@@ -715,7 +719,6 @@ calculate_annotation_agreement <- function(
   names(annotation_list) <- methods
 
 
-
   # Check same number of spatial locations
 
 
@@ -726,12 +729,10 @@ calculate_annotation_agreement <- function(
   )
 
   if (length(unique(n_spots)) != 1) {
-
     stop(
       "All methods must contain the same number of spatial locations."
     )
   }
-
 
 
   # Pairwise combinations
@@ -747,7 +748,6 @@ calculate_annotation_agreement <- function(
   agreement_list <- lapply(
     method_pairs,
     function(pair) {
-
       method1 <- pair[1]
       method2 <- pair[2]
 
@@ -755,17 +755,15 @@ calculate_annotation_agreement <- function(
       label2 <- annotation_list[[method2]]
 
 
-
       # Remove missing labels if requested
 
 
       if (remove_na) {
-
         keep <-
           !is.na(label1) &
-          !is.na(label2) &
-          label1 != "" &
-          label2 != ""
+            !is.na(label2) &
+            label1 != "" &
+            label2 != ""
 
         label1 <- label1[keep]
         label2 <- label2[keep]
@@ -773,12 +771,9 @@ calculate_annotation_agreement <- function(
 
 
       if (length(label1) == 0) {
-
         agreement <- NA_real_
         n_compared <- 0L
-
       } else {
-
         agreement <- mean(
           label1 == label2
         )
@@ -807,11 +802,7 @@ calculate_annotation_agreement <- function(
 }
 
 
-
-
-
 # Pairwise annotation agreement heatmap
-
 
 
 #' Plot pairwise cell-type annotation agreement
@@ -838,17 +829,15 @@ calculate_annotation_agreement <- function(
 #'
 #' @export
 plot_annotation_agreement <- function(
-    norm_list,
-    annotation_col = "SingleR_label",
-    method_order = NULL,
-    remove_na = TRUE,
-    show_values = TRUE,
-    digits = 2,
-    colour_option = "viridis",
-    theme_name = "classic"
+  norm_list,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  remove_na = TRUE,
+  show_values = TRUE,
+  digits = 2,
+  colour_option = "viridis",
+  theme_name = "classic"
 ) {
-
-
   # Resolve methods
 
 
@@ -859,12 +848,10 @@ plot_annotation_agreement <- function(
 
 
   if (length(methods) < 2) {
-
     stop(
       "At least two normalisation methods are required."
     )
   }
-
 
 
   # Calculate pairwise agreement
@@ -878,45 +865,32 @@ plot_annotation_agreement <- function(
   )
 
 
-
   # Add diagonal
 
 
   diagonal_df <- data.frame(
-
     method1 = methods,
-
     method2 = methods,
-
     agreement = 1,
-
     n_compared = vapply(
       norm_list[methods],
       ncol,
       integer(1)
     ),
-
     stringsAsFactors = FALSE
   )
-
 
 
   # Add reversed comparisons
 
 
   reverse_df <- data.frame(
-
     method1 = agreement_df$method2,
-
     method2 = agreement_df$method1,
-
     agreement = agreement_df$agreement,
-
     n_compared = agreement_df$n_compared,
-
     stringsAsFactors = FALSE
   )
-
 
 
   # Combine
@@ -927,7 +901,6 @@ plot_annotation_agreement <- function(
     reverse_df,
     diagonal_df
   )
-
 
 
   # Factor ordering
@@ -944,7 +917,6 @@ plot_annotation_agreement <- function(
   )
 
 
-
   # Create labels BEFORE constructing ggplot
 
 
@@ -959,7 +931,6 @@ plot_annotation_agreement <- function(
   )
 
 
-
   # Plot
 
 
@@ -971,47 +942,36 @@ plot_annotation_agreement <- function(
       fill = .data$agreement
     )
   ) +
-
-    ggplot2::geom_tile(alpha=0.8) +
-
+    ggplot2::geom_tile(alpha = 0.8) +
     viridis::scale_fill_viridis(
       option = colour_option,
       limits = c(0, 1),
       name = "Agreement"
     ) +
-
     ggplot2::coord_fixed() +
-
     ggplot2::labs(
       x = NULL,
       y = NULL
     ) +
-
     .get_plot_theme(
       theme_name
     ) +
-
     ggplot2::theme(
-
       panel.grid =
         ggplot2::element_blank(),
-
       axis.text.x =
         ggplot2::element_text(
           angle = 45,
           hjust = 1
         ),
-
       legend.position = "right"
     )
-
 
 
   # Add agreement values
 
 
   if (show_values) {
-
     p <- p +
 
       ggplot2::geom_text(
@@ -1021,7 +981,6 @@ plot_annotation_agreement <- function(
         size = 3
       )
   }
-
 
 
   # Return
@@ -1035,19 +994,17 @@ plot_annotation_agreement <- function(
 }
 
 
-
 .extract_marker_expression <- function(
-    norm_list,
-    markers,
-    annotation_col,
-    method_order = NULL,
-    reference_method = NULL
+  norm_list,
+  markers,
+  annotation_col,
+  method_order = NULL,
+  reference_method = NULL
 ) {
-
   if (is.null(names(norm_list)) ||
-      anyNA(names(norm_list)) ||
-      any(!nzchar(names(norm_list))) ||
-      anyDuplicated(names(norm_list))) {
+    anyNA(names(norm_list)) ||
+    any(!nzchar(names(norm_list))) ||
+    anyDuplicated(names(norm_list))) {
     stop("norm_list must have unique, non-empty method names.")
   }
 
@@ -1055,7 +1012,7 @@ plot_annotation_agreement <- function(
     methods <- names(norm_list)
   } else {
     if (anyDuplicated(method_order) ||
-        !all(method_order %in% names(norm_list))) {
+      !all(method_order %in% names(norm_list))) {
       stop("method_order contains duplicate or unknown methods.")
     }
     methods <- method_order
@@ -1074,7 +1031,6 @@ plot_annotation_agreement <- function(
   ref_labels <- NULL
 
   if (!is.null(reference_method)) {
-
     if (!reference_method %in% names(norm_list)) {
       stop("reference_method not found in norm_list.")
     }
@@ -1092,12 +1048,12 @@ plot_annotation_agreement <- function(
     ref_ids <- colnames(ref_spe)
 
     if (is.null(ref_ids) ||
-        anyNA(ref_ids) ||
-        anyDuplicated(ref_ids)) {
+      anyNA(ref_ids) ||
+      anyDuplicated(ref_ids)) {
       stop("Reference must have unique cell identifiers.")
     }
 
-    ref_labels <- setNames(
+    ref_labels <- stats::setNames(
       as.character(ref_cd[[annotation_col]]),
       ref_ids
     )
@@ -1106,7 +1062,6 @@ plot_annotation_agreement <- function(
   # Extract expression
 
   df_list <- lapply(methods, function(method) {
-
     spe <- norm_list[[method]]
 
     missing_genes <- setdiff(markers, rownames(spe))
@@ -1114,27 +1069,26 @@ plot_annotation_agreement <- function(
     if (length(missing_genes) > 0) {
       stop(
         "Missing genes in ", method, ": ",
-        paste(missing_genes, collapse = ", ")
+        toString(missing_genes)
       )
     }
 
     if (!"logcounts" %in%
-        SummarizedExperiment::assayNames(spe)) {
+      SummarizedExperiment::assayNames(spe)) {
       stop("logcounts assay missing in method: ", method)
     }
 
     cell_ids <- colnames(spe)
 
     if (is.null(cell_ids) ||
-        anyNA(cell_ids) ||
-        anyDuplicated(cell_ids)) {
+      anyNA(cell_ids) ||
+      anyDuplicated(cell_ids)) {
       stop("Unique cell identifiers required: ", method)
     }
 
     # Get annotation labels
 
     if (!is.null(reference_method)) {
-
       if (!setequal(cell_ids, names(ref_labels))) {
         stop(
           "Cell identifiers do not match the reference in: ",
@@ -1143,9 +1097,7 @@ plot_annotation_agreement <- function(
       }
 
       cell_types <- unname(ref_labels[cell_ids])
-
     } else {
-
       cd <- as.data.frame(
         SummarizedExperiment::colData(spe)
       )
@@ -1185,8 +1137,7 @@ plot_annotation_agreement <- function(
   df <- df[
     !is.na(df$cell_type) &
       nzchar(df$cell_type) &
-      is.finite(df$expression),
-    ,
+      is.finite(df$expression), ,
     drop = FALSE
   ]
 
@@ -1240,25 +1191,40 @@ plot_annotation_agreement <- function(
 #'
 #' @return A list containing plotting data and ggplot.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' markers <- head(
+#'   rownames(norm_example[[1]]),
+#'   2
+#' )
+#'
+#' p <- plot_marker_expression(
+#'   norm_list = norm_example,
+#'   annotation_col = "cell_type",
+#'   markers = markers,
+#'   palette = "turbo"
+#' )
+#'
+#' p$plot
 #' @export
 
 plot_marker_expression <- function(
-    norm_list,
-    markers,
-    annotation_col = "SingleR_label",
-    methods = NULL,
-    method_order = NULL,
-    cell_types = NULL,
-    reference_method = NULL,
-    scale_expression = TRUE,
-    winsorize = TRUE,
-    winsor_quantile = 0.99,
-    layout = "method_gene",
-    palette = "viridis",
-    box_width = 0.7,
-    theme_name = "classic"
+  norm_list,
+  markers,
+  annotation_col = "SingleR_label",
+  methods = NULL,
+  method_order = NULL,
+  cell_types = NULL,
+  reference_method = NULL,
+  scale_expression = TRUE,
+  winsorize = TRUE,
+  winsor_quantile = 0.99,
+  layout = "method_gene",
+  palette = "viridis",
+  box_width = 0.7,
+  theme_name = "classic"
 ) {
-
   layout <- match.arg(
     layout,
     c("method_gene", "gene_celltype")
@@ -1273,9 +1239,8 @@ plot_marker_expression <- function(
   }
 
   if (length(methods) == 0 ||
-      anyDuplicated(methods) ||
-      !all(methods %in% available_methods)) {
-
+    anyDuplicated(methods) ||
+    !all(methods %in% available_methods)) {
     stop(
       "methods must contain valid, unique ",
       "normalisation method names."
@@ -1287,10 +1252,8 @@ plot_marker_expression <- function(
   if (is.null(method_order)) {
     method_order <- methods
   } else {
-
     if (anyDuplicated(method_order) ||
-        !setequal(method_order, methods)) {
-
+      !setequal(method_order, methods)) {
       stop(
         "method_order must contain exactly ",
         "the selected methods."
@@ -1301,10 +1264,9 @@ plot_marker_expression <- function(
   # Validate winsorisation quantile
 
   if (length(winsor_quantile) != 1 ||
-      !is.finite(winsor_quantile) ||
-      winsor_quantile <= 0 ||
-      winsor_quantile > 1) {
-
+    !is.finite(winsor_quantile) ||
+    winsor_quantile <= 0 ||
+    winsor_quantile > 1) {
     stop(
       "winsor_quantile must be in (0, 1]."
     )
@@ -1341,7 +1303,6 @@ plot_marker_expression <- function(
     ) |>
     dplyr::mutate(
       expression_scaled = if (scale_expression) {
-
         s <- stats::sd(.data$expression_winsor)
 
         if (is.na(s) || s == 0) {
@@ -1352,7 +1313,6 @@ plot_marker_expression <- function(
               mean(.data$expression_winsor)
           ) / s
         }
-
       } else {
         .data$expression_winsor
       }
@@ -1362,7 +1322,6 @@ plot_marker_expression <- function(
   # Select cell types
 
   if (!is.null(cell_types)) {
-
     available_cell_types <- unique(
       as.character(df$cell_type)
     )
@@ -1373,10 +1332,9 @@ plot_marker_expression <- function(
     )
 
     if (length(missing_types) > 0) {
-
       stop(
         "Unknown cell types: ",
-        paste(missing_types, collapse = ", ")
+        toString(missing_types)
       )
     }
 
@@ -1389,9 +1347,7 @@ plot_marker_expression <- function(
       df$cell_type,
       levels = cell_types
     )
-
   } else {
-
     df$cell_type <- droplevels(
       df$cell_type
     )
@@ -1407,7 +1363,6 @@ plot_marker_expression <- function(
   # Plot
 
   if (layout == "method_gene") {
-
     p <- ggplot2::ggplot(
       df,
       ggplot2::aes(
@@ -1419,9 +1374,7 @@ plot_marker_expression <- function(
       ggplot2::facet_grid(
         method ~ gene
       )
-
   } else {
-
     p <- ggplot2::ggplot(
       df,
       ggplot2::aes(
@@ -1437,7 +1390,7 @@ plot_marker_expression <- function(
 
   p <- p +
     ggplot2::geom_boxplot(
-      outlier.shape = NA,alpha=0.7,
+      outlier.shape = NA, alpha = 0.7,
       width = box_width
     ) +
     ggplot2::labs(
@@ -1463,7 +1416,6 @@ plot_marker_expression <- function(
   # Optional colour palette
 
   if (!is.null(palette)) {
-
     options <- c(
       viridis = "D",
       magma = "A",
@@ -1476,17 +1428,14 @@ plot_marker_expression <- function(
     )
 
     if (is.character(palette) &&
-        length(palette) == 1 &&
-        !is.na(palette) &&
-        palette %in% names(options)) {
-
+      length(palette) == 1 &&
+      !is.na(palette) &&
+      palette %in% names(options)) {
       p <- p +
         ggplot2::scale_fill_viridis_d(
           option = options[[palette]]
         )
-
     } else {
-
       p <- p +
         ggplot2::scale_fill_manual(
           values = palette
@@ -1499,8 +1448,6 @@ plot_marker_expression <- function(
     plot = p
   )
 }
-
-
 
 
 #' Plot marker-gene discrimination across methods
@@ -1523,27 +1470,60 @@ plot_marker_expression <- function(
 #' @param theme_name Plot theme.
 #'
 #' @return List containing AUC summary data and ggplot.
+#'
+#' @examples
+#' data(norm_example)
+#'
+#' spe <- norm_example[[1]]
+#'
+#' labels <- as.character(
+#'   SummarizedExperiment::colData(spe)$cell_type
+#' )
+#'
+#' label_counts <- sort(
+#'   table(labels),
+#'   decreasing = TRUE
+#' )
+#'
+#' target_label <- names(label_counts)[1]
+#'
+#' markers <- head(rownames(spe), 2)
+#'
+#' target_types <- stats::setNames(
+#'   rep(target_label, length(markers)),
+#'   markers
+#' )
+#'
+#' p <- plot_marker_auc(
+#'   norm_list = norm_example,
+#'   markers = markers,
+#'   target_types = target_types,
+#'   annotation_col = "cell_type",
+#'   reference_method = "None",
+#'   palette = "magma",
+#'   point_size = 3
+#' )
+#'
+#' p$plot
 #' @export
 
 plot_marker_auc <- function(
-    norm_list,
-    markers,
-    target_types,
-    annotation_col = "SingleR_label",
-    method_order = NULL,
-    reference_method = NULL,
-    palette = "viridis",
-    point_size = 3,
-    theme_name = "classic",
-    ncol=2
+  norm_list,
+  markers,
+  target_types,
+  annotation_col = "SingleR_label",
+  method_order = NULL,
+  reference_method = NULL,
+  palette = "viridis",
+  point_size = 3,
+  theme_name = "classic",
+  ncol = 2
 ) {
-
   # Validate target cell types
 
   if (is.null(names(target_types)) ||
-      anyDuplicated(names(target_types)) ||
-      !all(markers %in% names(target_types))) {
-
+    anyDuplicated(names(target_types)) ||
+    !all(markers %in% names(target_types))) {
     stop(
       "target_types must be a named vector ",
       "containing one target cell type per marker."
@@ -1553,7 +1533,7 @@ plot_marker_auc <- function(
   target_types <- target_types[markers]
 
   if (anyNA(target_types) ||
-      any(!nzchar(target_types))) {
+    any(!nzchar(target_types))) {
     stop("target_types contains missing or empty labels.")
   }
 
@@ -1583,16 +1563,12 @@ plot_marker_auc <- function(
       n_target = sum(.data$target),
       n_other = sum(!.data$target),
       AUC = {
-
         y <- .data$target
         x <- .data$expression
 
         if (all(y) || !any(y)) {
-
           NA_real_
-
         } else {
-
           roc_obj <- pROC::roc(
             response = y,
             predictor = x,
@@ -1622,7 +1598,8 @@ plot_marker_auc <- function(
       na.rm = TRUE
     ) +
     ggplot2::facet_wrap(
-      ~ gene,scales='free',ncol=ncol
+      ~gene,
+      scales = "free", ncol = ncol
     ) +
     # ggplot2::scale_y_continuous(
     #   limits = c(0, 1),
@@ -1650,4 +1627,3 @@ plot_marker_auc <- function(
     plot = p
   )
 }
-

@@ -1,25 +1,18 @@
-
 # Internal utility functions
 
 
-
 .extract_rowdata <- function(
-    spe,
-    gene_id = "rownames"
+  spe,
+  gene_id = "rownames"
 ) {
-
   rd <- as.data.frame(
     SummarizedExperiment::rowData(spe)
   )
 
   if (gene_id == "rownames") {
-
     rd$gene <- rownames(rd)
-
   } else {
-
     if (!gene_id %in% colnames(rd)) {
-
       stop(
         "Gene identifier column not found: ",
         gene_id
@@ -34,7 +27,6 @@
 
 
 .check_named_list <- function(x) {
-
   if (!is.list(x)) {
     stop("Input must be a list.")
   }
@@ -48,10 +40,9 @@
 
 
 .resolve_methods <- function(
-    x,
-    method_order = NULL
+  x,
+  method_order = NULL
 ) {
-
   .check_named_list(x)
 
   available_methods <- names(x)[
@@ -72,7 +63,6 @@
   )
 
   if (length(missing_methods) > 0) {
-
     warning(
       "Methods not available and skipped: ",
       paste(
@@ -91,7 +81,6 @@
 
 
 .scale_zero_one <- function(x) {
-
   xmin <- min(
     x,
     na.rm = TRUE
@@ -104,10 +93,9 @@
 
   if (
     !is.finite(xmin) ||
-    !is.finite(xmax) ||
-    xmax == xmin
+      !is.finite(xmax) ||
+      xmax == xmin
   ) {
-
     return(
       rep(
         0,

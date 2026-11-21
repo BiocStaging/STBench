@@ -26,3 +26,47 @@ across normalization methods.
 Rows correspond to pathways and columns correspond to
 normalization methods.
 }
+\examples{
+
+data(norm_ccc_example)
+data("CellChatDB.mouse", package = "CellChat")
+
+ccc_results <- run_ccc(
+  spelist = norm_ccc_example,
+  celltype_col = "cell_type",
+  database = CellChat::CellChatDB.mouse,
+  spatial_factors = data.frame(
+    ratio = 0.5,
+    tol = 12.5
+  ),
+  interaction_range = 250,
+  contact_range = 25,
+  nboot = 10,
+  min_cells = 5,
+  verbose = FALSE
+)
+
+detected_pathways <- unique(unlist(
+  lapply(ccc_results, function(x) {
+    x$cellchat@netP$pathways
+  })
+))
+
+if (length(detected_pathways) > 0L) {
+  pathway <- detected_pathways[1]
+
+  for (method in names(ccc_results)) {
+    cellchat <- ccc_results[[method]]$cellchat
+
+    if (!is.null(cellchat) &&
+      pathway \%in\% cellchat@netP$pathways) {
+      CellChat::netVisual_aggregate(
+        cellchat,
+        signaling = pathway,
+        layout = "circle"
+      )
+    }
+  }
+}
+
+}

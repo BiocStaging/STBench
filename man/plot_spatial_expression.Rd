@@ -60,3 +60,22 @@ When scale_expr = FALSE, original assay values are used.
 Each gene receives a separate plot with a common colour
 scale across the selected methods.
 }
+\examples{
+data(norm_example)
+
+genes <- head(rownames(norm_example[[1]]), 2)
+
+p_expr <- plot_spatial_expression(
+  norm_list = norm_example,
+  genes = genes,
+  assay_name = "logcounts",
+  scale_expr = TRUE,
+  scale_by = "gene",
+  point_size = 0.5,
+  colour_option = "magma",
+  ncol_genes = 1,
+  theme_name = "classic"
+)
+
+p_expr$plot
+}

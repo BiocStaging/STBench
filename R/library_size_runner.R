@@ -1,7 +1,4 @@
-
-
 # Normalised library-size comparison
-
 
 
 #' Compare normalised library sizes across methods
@@ -28,17 +25,26 @@
 #'
 #' @return A list containing comparison data, boxplot,
 #'   spatial plot, and combined plot.
+#' @examples
+#' data(norm_example)
 #'
+#' p_ls <- plot_library_size_comparison(
+#'   norm_example,
+#'   methods = NULL,
+#'   assay_name = "logcounts",
+#'   point_size = 0.5,
+#'   theme_name = "classic"
+#' )
+#'
+#' p_ls$plot
 #' @export
 plot_library_size_comparison <- function(
-    norm,
-    methods = NULL,
-    assay_name = "logcounts",
-    point_size = 0.5,
-    theme_name = "classic"
+  norm,
+  methods = NULL,
+  assay_name = "logcounts",
+  point_size = 0.5,
+  theme_name = "classic"
 ) {
-
-
   # Select methods
 
 
@@ -50,19 +56,17 @@ plot_library_size_comparison <- function(
 
   if (
     is.null(names(norm)) ||
-    anyNA(names(norm)) ||
-    any(!nzchar(names(norm))) ||
-    anyDuplicated(names(norm))
+      anyNA(names(norm)) ||
+      any(!nzchar(names(norm))) ||
+      anyDuplicated(names(norm))
   ) {
     stop("norm must have unique, non-empty method names.")
   }
 
   if (is.null(methods)) {
-
     methods <- names(norm)[
       !tolower(names(norm)) %in% excluded
     ]
-
   }
 
   unknown <- setdiff(
@@ -71,7 +75,6 @@ plot_library_size_comparison <- function(
   )
 
   if (length(unknown) > 0) {
-
     stop(
       "Unknown methods: ",
       paste(unknown, collapse = ", ")
@@ -85,21 +88,18 @@ plot_library_size_comparison <- function(
   methods <- unique(methods)
 
 
-
   # Calculate normalised library sizes
 
 
   comparison_data <- lapply(
     methods,
     function(method) {
-
       spe <- norm[[method]]
 
       if (
         !assay_name %in%
-        SummarizedExperiment::assayNames(spe)
+          SummarizedExperiment::assayNames(spe)
       ) {
-
         stop(
           "Assay '",
           assay_name,
@@ -141,7 +141,6 @@ plot_library_size_comparison <- function(
       coords <- SpatialExperiment::spatialCoords(spe)
 
       if (ncol(coords) < 2) {
-
         stop(
           "Two spatial coordinates are required for: ",
           method
@@ -161,7 +160,6 @@ plot_library_size_comparison <- function(
   )
 
 
-
   # Combine data
 
 
@@ -174,13 +172,20 @@ plot_library_size_comparison <- function(
     levels = methods
   )
 
-  df <- df %>%
-    group_by(method) %>%
-    mutate(
-      q = quantile(log_expression_total, 0.98, na.rm = TRUE),
-      adj.log.exprs = pmin(log_expression_total, q)
-    ) %>%
-    ungroup()
+  df <- df |>
+    dplyr::group_by(.data$method) |>
+    dplyr::mutate(
+      q = stats::quantile(
+        .data$log_expression_total,
+        0.98,
+        na.rm = TRUE
+      ),
+      adj.log.exprs = pmin(
+        .data$log_expression_total,
+        .data$q
+      )
+    ) |>
+    dplyr::ungroup()
 
   # Boxplot comparison
 
@@ -214,7 +219,6 @@ plot_library_size_comparison <- function(
     )
 
 
-
   # Spatial maps
 
 
@@ -230,7 +234,7 @@ plot_library_size_comparison <- function(
       size = point_size
     ) +
     ggplot2::facet_wrap(
-      ~ method
+      ggplot2::vars(.data$method)
     ) +
     ggplot2::coord_fixed() +
     viridis::scale_colour_viridis(
@@ -250,7 +254,6 @@ plot_library_size_comparison <- function(
     )
 
 
-
   # Combine plots
 
 
@@ -259,7 +262,6 @@ plot_library_size_comparison <- function(
     p_spatial,
     ncol = 1
   )
-
 
 
   # Return

@@ -40,3 +40,27 @@ A single annotation uses facet_wrap by method.
 Multiple annotations use facet_grid with methods in rows
 and annotations in columns.
 }
+\examples{
+data(norm_example)
+
+umap_data <- get_umap_data(
+  norm_example,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
+)
+
+p_umap_layer <- plot_umap_comparison(
+  umap_data,
+  colour_by = "cell_type",
+  point_size = 0.58,
+  alpha = 0.6,
+  ncol = 3,
+  theme_name = "classic"
+)
+
+p_umap_layer$plot
+}

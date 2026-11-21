@@ -61,3 +61,26 @@ across all selected normalisation methods.
 Predicted clusters share one colour scale and legend.
 Ground truth uses a separate palette and legend.
 }
+\examples{
+data(norm_example)
+
+banksy_norm <- run_banksy_individual(
+  norm_list = norm_example,
+  k_geom = 15,
+  lambda = 0.8,
+  resolution = 0.2,
+  seed = 123
+)
+
+p <- plot_spatial_clustering(
+  norm_list = banksy_norm,
+  cluster_col = "banksy_cluster",
+  ground_truth_col = "cell_type",
+  show = "both",
+  point_size = 0.5,
+  ncol = 2,
+  theme_name = "classic"
+)
+
+p$plot
+}

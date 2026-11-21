@@ -24,11 +24,18 @@ A named list of normalised objects.
 Apply multiple normalisation methods
 }
 \examples{
-\dontrun{
+data(spe_example)
+
 norm <- normalize_spe(
-  spe,
-  methods = c("none", "scran")
+  spe_example,
+  methods = c("None", "SpaNorm"),
+  params = list(
+    spanorm = list(
+      sample_p = 0.15,
+      df_tps = 6,
+      adj_method = "logpac"
+    )
+  )
 )
-}
 
 }

@@ -1,7 +1,4 @@
-
-
 # UMAP comparison across normalisation methods
-
 
 
 #' Calculate UMAP embeddings across normalisation methods
@@ -23,18 +20,28 @@
 #'
 #' @return Data frame containing UMAP coordinates, method,
 #'   spot identifiers, and all colData annotations.
+#' @examples
+#' data(norm_example)
 #'
+#' umap_data <- get_umap_data(
+#'   norm_example,
+#'   methods = NULL,
+#'   prop_spots = 1,
+#'   seed = 123,
+#'   assay_name = "logcounts",
+#'   n_pcs = 30,
+#'   n_neighbors = 15
+#' )
 #' @export
 get_umap_data <- function(
-    norm,
-    methods = NULL,
-    prop_spots = 1,
-    seed = 123,
-    assay_name = "logcounts",
-    n_pcs = 30,
-    n_neighbors = 15
+  norm,
+  methods = NULL,
+  prop_spots = 1,
+  seed = 123,
+  assay_name = "logcounts",
+  n_pcs = 30,
+  n_neighbors = 15
 ) {
-
   # ----------------------------------------------------------
   # Select normalisation methods
   # ----------------------------------------------------------
@@ -70,10 +77,10 @@ get_umap_data <- function(
 
   if (
     length(prop_spots) != 1 ||
-    !is.numeric(prop_spots) ||
-    is.na(prop_spots) ||
-    prop_spots <= 0 ||
-    prop_spots > 1
+      !is.numeric(prop_spots) ||
+      is.na(prop_spots) ||
+      prop_spots <= 0 ||
+      prop_spots > 1
   ) {
     stop("prop_spots must be between 0 and 1.")
   }
@@ -125,7 +132,7 @@ get_umap_data <- function(
   # Sample identical spots across methods
   # ----------------------------------------------------------
 
-  set.seed(seed)
+  withr::local_seed(seed)
 
   n_sample <- max(
     4,
@@ -153,8 +160,7 @@ get_umap_data <- function(
     match(
       sampled_spots,
       colnames(reference)
-    ),
-    ,
+    ), ,
     drop = FALSE
   ]
 
@@ -166,7 +172,6 @@ get_umap_data <- function(
   umap_list <- lapply(
     methods,
     function(method) {
-
       message("Running PCA and UMAP: ", method)
 
       spe <- norm[[method]]
@@ -189,7 +194,7 @@ get_umap_data <- function(
 
       if (
         !assay_name %in%
-        SummarizedExperiment::assayNames(spe)
+          SummarizedExperiment::assayNames(spe)
       ) {
         stop(
           "Assay '",
@@ -204,7 +209,7 @@ get_umap_data <- function(
       # Run PCA
       # ----------------------------------------------
 
-      set.seed(seed)
+      withr::local_seed(seed)
 
       spe <- scater::runPCA(
         spe,
@@ -221,7 +226,7 @@ get_umap_data <- function(
       # Run UMAP
       # ----------------------------------------------
 
-      set.seed(seed)
+      withr::local_seed(seed)
 
       spe <- scater::runUMAP(
         spe,
@@ -290,10 +295,7 @@ get_umap_data <- function(
 }
 
 
-
-
 # Plot previously calculated UMAP embeddings
-
 
 
 #' Plot UMAP comparisons across normalisation methods
@@ -315,17 +317,38 @@ get_umap_data <- function(
 #' @param theme_name Plot theme.
 #'
 #' @return A list containing plotting data and ggplot.
+#' @examples
+#' data(norm_example)
 #'
+#' umap_data <- get_umap_data(
+#'   norm_example,
+#'   methods = NULL,
+#'   prop_spots = 1,
+#'   seed = 123,
+#'   assay_name = "logcounts",
+#'   n_pcs = 30,
+#'   n_neighbors = 15
+#' )
+#'
+#' p_umap_layer <- plot_umap_comparison(
+#'   umap_data,
+#'   colour_by = "cell_type",
+#'   point_size = 0.58,
+#'   alpha = 0.6,
+#'   ncol = 3,
+#'   theme_name = "classic"
+#' )
+#'
+#' p_umap_layer$plot
 #' @export
 plot_umap_comparison <- function(
-    umap_data,
-    colour_by = "region",
-    point_size = 0.58,
-    alpha = 0.6,
-    ncol = 3,
-    theme_name = "classic"
+  umap_data,
+  colour_by = "region",
+  point_size = 0.58,
+  alpha = 0.6,
+  ncol = 3,
+  theme_name = "classic"
 ) {
-
   # ----------------------------------------------------------
   # Check annotations
   # ----------------------------------------------------------
@@ -354,7 +377,6 @@ plot_umap_comparison <- function(
   # ----------------------------------------------------------
 
   if (length(colour_by) == 1) {
-
     colour_col <- colour_by[1]
 
     df <- umap_data
@@ -377,7 +399,7 @@ plot_umap_comparison <- function(
         stroke = 0
       ) +
       ggplot2::facet_wrap(
-        ~ method,
+        ~method,
         ncol = ncol,
         scales = "free"
       ) +
@@ -430,7 +452,6 @@ plot_umap_comparison <- function(
   df_list <- lapply(
     colour_by,
     function(col) {
-
       temp <- umap_data[
         ,
         c(

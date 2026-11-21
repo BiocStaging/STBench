@@ -57,3 +57,17 @@ The function supports either:
   of SpatialExperiment objects corresponding to multiple slices.
 }
 }
+\examples{
+data(norm_example)
+
+banksy_norm <- run_banksy_individual(
+  norm_list = norm_example,
+  methods = names(norm_example),
+  assay_name = "logcounts",
+  cluster_col = "banksy_cluster",
+  k_geom = 15,
+  lambda = 0.8,
+  resolution = 0.2,
+  seed = 123
+)
+}

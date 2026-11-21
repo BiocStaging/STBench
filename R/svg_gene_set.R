@@ -1,6 +1,4 @@
-
 # SVG gene-set analyses
-
 
 
 #' Extract SVG statistics for a gene set
@@ -12,15 +10,28 @@
 #' @param method_order Optional method order.
 #'
 #' @return Data frame.
+#' @examples
+#' data(svg_example)
+#'
+#' genes <- head(rownames(svg_example[[1]]), 5)
+#'
+#' svg_df <- extract_svg_gene_set(
+#'   svg_norm = svg_example,
+#'   genes = genes,
+#'   stat = "LR_stat",
+#'   gene_id = "rownames",
+#'   method_order = names(svg_example)
+#' )
+#'
+#' head(svg_df)
 #' @export
 extract_svg_gene_set <- function(
-    svg_norm,
-    genes,
-    stat = "LR_stat",
-    gene_id = "rownames",
-    method_order = NULL
+  svg_norm,
+  genes,
+  stat = "LR_stat",
+  gene_id = "rownames",
+  method_order = NULL
 ) {
-
   methods <- .resolve_methods(
     svg_norm,
     method_order
@@ -29,7 +40,6 @@ extract_svg_gene_set <- function(
   out <- lapply(
     methods,
     function(method) {
-
       spe <- svg_norm[[method]]
 
       rd <- .extract_rowdata(
@@ -38,7 +48,6 @@ extract_svg_gene_set <- function(
       )
 
       if (!stat %in% colnames(rd)) {
-
         stop(
           "Statistic '",
           stat,
@@ -58,7 +67,7 @@ extract_svg_gene_set <- function(
 
       names(rd)[2] <- "svg_stat"
 
-      rd$method <- method
+      rd$method <- rep(method, nrow(rd))
 
       rd
     }
@@ -92,29 +101,42 @@ extract_svg_gene_set <- function(
 #'
 #' @return List containing data and plot.
 #'
+#' @examples
+#' data(svg_example)
+#'
+#' genes <- head(rownames(svg_example[[1]]), 10)
+#'
+#' p <- plot_svg_gene_set_distribution(
+#'   svg_norm = svg_example,
+#'   genes = genes,
+#'   stat = "LR_stat",
+#'   transform = "log",
+#'   plot_type = "boxplot"
+#' )
+#'
+#' p$plot
 #' @export
 plot_svg_gene_set_distribution <- function(
-    svg_norm,
-    genes,
-    stat = "LR_stat",
-    method_order = NULL,
-    method_colors = NULL,
-    gene_id = "rownames",
-    transform = c(
-      "log1p",
-      "log",
-      "none"
-    ),
-    plot_type = c(
-      "boxplot",
-      "violin"
-    ),
-    add_jitter = TRUE,
-    point_size = 1.5,
-    alpha = 0.6,
-    theme_name = "classic"
+  svg_norm,
+  genes,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = c(
+    "log1p",
+    "log",
+    "none"
+  ),
+  plot_type = c(
+    "boxplot",
+    "violin"
+  ),
+  add_jitter = TRUE,
+  point_size = 1.5,
+  alpha = 0.6,
+  theme_name = "classic"
 ) {
-
   transform <- match.arg(
     transform
   )
@@ -137,19 +159,33 @@ plot_svg_gene_set_distribution <- function(
   )
 
   if (nrow(df) == 0) {
-
     stop(
       "None of the requested genes were found."
     )
   }
+  df <- df[
+    !is.na(df$method) & df$method %in% methods,
+    ,
+    drop = FALSE
+  ]
 
+  # Remove NA and invalid method names
+  methods <- unique(methods[!is.na(methods)])
+
+  df <- df[
+    !is.na(df$method) &
+      as.character(df$method) %in% methods,
+    ,
+    drop = FALSE
+  ]
+
+  # Recreate factor
   df$method <- factor(
-    df$method,
+    as.character(df$method),
     levels = methods
   )
 
   if (transform == "log1p") {
-
     df$value <- log1p(
       df$svg_stat
     )
@@ -159,12 +195,9 @@ plot_svg_gene_set_distribution <- function(
       stat,
       ")"
     )
-
   } else if (transform == "log") {
-
     df <- df[
-      df$svg_stat > 0,
-      ,
+      df$svg_stat > 0, ,
       drop = FALSE
     ]
 
@@ -177,9 +210,7 @@ plot_svg_gene_set_distribution <- function(
       stat,
       ")"
     )
-
   } else {
-
     df$value <- df$svg_stat
 
     y_lab <- stat
@@ -196,15 +227,12 @@ plot_svg_gene_set_distribution <- function(
   )
 
   if (plot_type == "boxplot") {
-
     p <- p +
       ggplot2::geom_boxplot(
         alpha = 0.65,
         outlier.shape = NA
       )
-
   } else {
-
     p <- p +
       ggplot2::geom_violin(
         alpha = 0.65,
@@ -213,7 +241,6 @@ plot_svg_gene_set_distribution <- function(
   }
 
   if (add_jitter) {
-
     p <- p +
       ggplot2::geom_jitter(
         width = 0.15,
@@ -224,7 +251,7 @@ plot_svg_gene_set_distribution <- function(
 
   p <- p +
     ggplot2::labs(
-      x = NULL,#"Normalisation method",
+      x = NULL, # "Normalisation method",
       y = y_lab
     ) +
     .get_plot_theme(
@@ -240,7 +267,6 @@ plot_svg_gene_set_distribution <- function(
     )
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_fill_manual(
         values = method_colors
@@ -257,10 +283,7 @@ plot_svg_gene_set_distribution <- function(
 }
 
 
-
-
 # SVG gene-set proportion among top-ranked genes
-
 
 
 #' Proportion of a gene set among top-ranked SVGs
@@ -292,30 +315,41 @@ plot_svg_gene_set_distribution <- function(
 #'
 #' @return List containing data and plot.
 #'
+#' @examples
+#' data(svg_example)
+#'
+#' genes <- head(rownames(svg_example[[1]]), 20)
+#'
+#' p <- plot_svg_topn_gene_set(
+#'   svg_norm = svg_example,
+#'   genes = genes,
+#'   top_n = c(10, 20, 50),
+#'   gene_set_name = "Example genes"
+#' )
+#'
+#' p$plot
 #' @export
 plot_svg_topn_gene_set <- function(
-    svg_norm,
-    genes,
-    top_n = c(50, 100, 200, 300),
-    method_order = NULL,
-    method_colors = NULL,
-    gene_id = "rownames",
-    theme_name = "classic",
-    gene_set_name = "Gene set",
-    title = NULL,
-    subtitle = NULL,
-    alpha = 1,
-    point_size = 2,
-    line_width = 1,
-    line_type = "solid",
-    show_points = TRUE,
-    show_legend = TRUE,
-    percentage = FALSE
+  svg_norm,
+  genes,
+  top_n = c(50, 100, 200, 300),
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  theme_name = "classic",
+  gene_set_name = "Gene set",
+  title = NULL,
+  subtitle = NULL,
+  alpha = 1,
+  point_size = 2,
+  line_width = 1,
+  line_type = "solid",
+  show_points = TRUE,
+  show_legend = TRUE,
+  percentage = FALSE
 ) {
-
-  # ----------------------------------------------------------
   # Resolve methods
-  # ----------------------------------------------------------
+
 
   methods <- .resolve_methods(
     svg_norm,
@@ -323,9 +357,8 @@ plot_svg_topn_gene_set <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Validate gene set and top-N values
-  # ----------------------------------------------------------
+
 
   genes <- unique(
     as.character(genes)
@@ -341,10 +374,10 @@ plot_svg_topn_gene_set <- function(
 
   if (
     !is.numeric(top_n) ||
-    anyNA(top_n) ||
-    any(!is.finite(top_n)) ||
-    any(top_n <= 0) ||
-    any(top_n != floor(top_n))
+      anyNA(top_n) ||
+      any(!is.finite(top_n)) ||
+      any(top_n <= 0) ||
+      any(top_n != floor(top_n))
   ) {
     stop("top_n must contain positive integers.")
   }
@@ -358,14 +391,12 @@ plot_svg_topn_gene_set <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Extract top-ranked SVGs
-  # ----------------------------------------------------------
+
 
   df <- lapply(
     methods,
     function(method) {
-
       spe <- svg_norm[[method]]
 
       rd <- .extract_rowdata(
@@ -374,7 +405,6 @@ plot_svg_topn_gene_set <- function(
       )
 
       if (!"rank" %in% colnames(rd)) {
-
         stop(
           "'rank' not found for method: ",
           method
@@ -384,14 +414,12 @@ plot_svg_topn_gene_set <- function(
       rd <- rd[
         !is.na(rd$rank) &
           is.finite(rd$rank) &
-          !is.na(rd$gene),
-        ,
+          !is.na(rd$gene), ,
         drop = FALSE
       ]
 
       rd <- rd[
-        order(rd$rank),
-        ,
+        order(rd$rank), ,
         drop = FALSE
       ]
 
@@ -408,7 +436,6 @@ plot_svg_topn_gene_set <- function(
         lapply(
           n_use,
           function(n) {
-
             top_genes <- rd$gene[
               seq_len(n)
             ]
@@ -432,9 +459,8 @@ plot_svg_topn_gene_set <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Combine data
-  # ----------------------------------------------------------
+
 
   df <- Filter(
     Negate(is.null),
@@ -442,7 +468,6 @@ plot_svg_topn_gene_set <- function(
   )
 
   if (length(df) == 0) {
-
     stop(
       "No valid top-N values were available."
     )
@@ -461,9 +486,8 @@ plot_svg_topn_gene_set <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Axis labels
-  # ----------------------------------------------------------
+
 
   y_label <- paste0(
     gene_set_name,
@@ -471,7 +495,6 @@ plot_svg_topn_gene_set <- function(
   )
 
   if (is.null(title)) {
-
     title <- paste0(
       gene_set_name,
       " among top-ranked SVGs"
@@ -479,9 +502,8 @@ plot_svg_topn_gene_set <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Plot
-  # ----------------------------------------------------------
+
 
   p <- ggplot2::ggplot(
     df,
@@ -500,7 +522,6 @@ plot_svg_topn_gene_set <- function(
 
 
   if (show_points) {
-
     p <- p +
       ggplot2::geom_point(
         size = point_size,
@@ -514,7 +535,7 @@ plot_svg_topn_gene_set <- function(
       breaks = top_n
     ) +
     ggplot2::labs(
-      title = NULL,#title,
+      title = NULL, # title,
       subtitle = subtitle,
       x = "Top N SVGs",
       y = y_label,
@@ -536,12 +557,10 @@ plot_svg_topn_gene_set <- function(
     )
 
 
-  # ----------------------------------------------------------
   # Percentage axis
-  # ----------------------------------------------------------
+
 
   if (percentage) {
-
     p <- p +
       ggplot2::scale_y_continuous(
         labels = scales::label_percent(
@@ -554,12 +573,10 @@ plot_svg_topn_gene_set <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Method colours
-  # ----------------------------------------------------------
+
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_colour_manual(
         values = method_colors
@@ -567,9 +584,8 @@ plot_svg_topn_gene_set <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
+
 
   return(
     list(
@@ -580,11 +596,7 @@ plot_svg_topn_gene_set <- function(
 }
 
 
-
-
-
 # SVG comparison across multiple gene sets
-
 
 
 #' Compare SVG statistics across multiple gene sets
@@ -622,35 +634,45 @@ plot_svg_topn_gene_set <- function(
 #' @param theme_name Plot theme.
 #'
 #' @return List containing plotting data and ggplot.
+#' @examples
+#' data(svg_example)
 #'
+#' marker_genes <- head(rownames(svg_example[[1]]), 5)
+#'
+#' p <- plot_svg_stat(
+#'   svg_norm = svg_example,
+#'   genes = marker_genes,
+#'   stat = "LR_stat",
+#'   transform = "log"
+#' )
+#'
+#' p$plot
 #' @export
 plot_svg_gene_sets <- function(
-    svg_norm,
-    gene_sets,
-    stat = "LR_stat",
-    method_order = NULL,
-    method_colors = NULL,
-    gene_id = "rownames",
-    transform = c("log1p", "log", "none"),
-    plot_type = c("boxplot", "violin"),
-    scales = c("free_y", "fixed", "free"),
-    facet_ncol = 2,
-    add_jitter = TRUE,
-    point_size = 1,
-    alpha = 0.65,
-    jitter_alpha = 0.5,
-    box_width = 0.65,
-    title = NULL,
-    subtitle = NULL,
-    x_label = "Normalisation method",
-    y_label = NULL,
-    show_legend = FALSE,
-    theme_name = "classic"
+  svg_norm,
+  gene_sets,
+  stat = "LR_stat",
+  method_order = NULL,
+  method_colors = NULL,
+  gene_id = "rownames",
+  transform = c("log1p", "log", "none"),
+  plot_type = c("boxplot", "violin"),
+  scales = c("free_y", "fixed", "free"),
+  facet_ncol = 2,
+  add_jitter = TRUE,
+  point_size = 1,
+  alpha = 0.65,
+  jitter_alpha = 0.5,
+  box_width = 0.65,
+  title = NULL,
+  subtitle = NULL,
+  x_label = "Normalisation method",
+  y_label = NULL,
+  show_legend = FALSE,
+  theme_name = "classic"
 ) {
-
-  # ----------------------------------------------------------
   # Validate input
-  # ----------------------------------------------------------
+
 
   transform <- match.arg(transform)
 
@@ -660,11 +682,11 @@ plot_svg_gene_sets <- function(
 
   if (
     !is.list(gene_sets) ||
-    length(gene_sets) == 0 ||
-    is.null(names(gene_sets)) ||
-    anyNA(names(gene_sets)) ||
-    any(!nzchar(names(gene_sets))) ||
-    anyDuplicated(names(gene_sets))
+      length(gene_sets) == 0 ||
+      is.null(names(gene_sets)) ||
+      anyNA(names(gene_sets)) ||
+      any(!nzchar(names(gene_sets))) ||
+      anyDuplicated(names(gene_sets))
   ) {
     stop(
       "gene_sets must be a named list of gene vectors."
@@ -685,14 +707,12 @@ plot_svg_gene_sets <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Extract SVG statistics
-  # ----------------------------------------------------------
+
 
   df_list <- lapply(
     names(gene_sets),
     function(set_name) {
-
       genes <- unique(
         gene_sets[[set_name]]
       )
@@ -737,12 +757,10 @@ plot_svg_gene_sets <- function(
   df <- dplyr::bind_rows(df_list)
 
 
-  # ----------------------------------------------------------
   # Apply transformations
-  # ----------------------------------------------------------
+
 
   if (transform == "log1p") {
-
     if (any(df$svg_stat < -1, na.rm = TRUE)) {
       stop("log1p requires SVG statistics >= -1.")
     }
@@ -756,13 +774,10 @@ plot_svg_gene_sets <- function(
       stat,
       ")"
     )
-
   } else if (transform == "log") {
-
     df <- df[
       !is.na(df$svg_stat) &
-        df$svg_stat > 0,
-      ,
+        df$svg_stat > 0, ,
       drop = FALSE
     ]
 
@@ -775,17 +790,14 @@ plot_svg_gene_sets <- function(
       stat,
       ")"
     )
-
   } else {
-
     df$value <- df$svg_stat
 
     default_y_label <- stat
   }
 
   df <- df[
-    is.finite(df$value),
-    ,
+    is.finite(df$value), ,
     drop = FALSE
   ]
 
@@ -794,9 +806,8 @@ plot_svg_gene_sets <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Factor ordering
-  # ----------------------------------------------------------
+
 
   df$method <- factor(
     df$method,
@@ -813,9 +824,8 @@ plot_svg_gene_sets <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Initialise plot
-  # ----------------------------------------------------------
+
 
   p <- ggplot2::ggplot(
     df,
@@ -828,12 +838,10 @@ plot_svg_gene_sets <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Boxplot or violin
-  # ----------------------------------------------------------
+
 
   if (plot_type == "boxplot") {
-
     p <- p +
       ggplot2::geom_boxplot(
         width = box_width,
@@ -841,9 +849,7 @@ plot_svg_gene_sets <- function(
         outlier.shape = NA,
         colour = "black"
       )
-
   } else {
-
     p <- p +
       ggplot2::geom_violin(
         alpha = alpha,
@@ -852,12 +858,10 @@ plot_svg_gene_sets <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Individual gene points
-  # ----------------------------------------------------------
+
 
   if (add_jitter) {
-
     p <- p +
       ggplot2::geom_jitter(
         width = 0.15,
@@ -868,13 +872,12 @@ plot_svg_gene_sets <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Facets and labels
-  # ----------------------------------------------------------
+
 
   p <- p +
     ggplot2::facet_wrap(
-      ~ gene_set,
+      ~gene_set,
       ncol = facet_ncol,
       scales = scales
     ) +
@@ -907,12 +910,10 @@ plot_svg_gene_sets <- function(
     )
 
 
-  # ----------------------------------------------------------
   # Method colours
-  # ----------------------------------------------------------
+
 
   if (!is.null(method_colors)) {
-
     p <- p +
       ggplot2::scale_fill_manual(
         values = method_colors
@@ -923,9 +924,8 @@ plot_svg_gene_sets <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
+
 
   return(
     list(

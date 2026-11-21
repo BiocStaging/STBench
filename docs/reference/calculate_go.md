@@ -22,6 +22,7 @@ calculate_go(
   pvalue_cutoff = 0.05,
   qvalue_cutoff = 0.05,
   p_adjust_method = "BH",
+  test_type = "wilcox",
   readable = TRUE
 )
 ```
@@ -87,6 +88,11 @@ calculate_go(
 
   Multiple-testing correction method.
 
+- test_type:
+
+  Statistical test used for differential expression analysis in
+  \`scran::findMarkers()\`. Default is \`"wilcox"\`.
+
 - readable:
 
   Logical indicating whether gene IDs should be converted to readable
@@ -108,3 +114,38 @@ A list containing:
 
 Each normalisation method should contain one SpatialExperiment object
 representing the same spatial sample.
+
+## Examples
+
+``` r
+data(norm_ccc_example)
+
+go_result <- calculate_go(
+  norm_list = norm_ccc_example,
+  cluster_col = "layer_guess",
+  methods = names(norm_ccc_example),
+  assay_name = "logcounts",
+  OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.4,
+  min_spots = 10,
+  min_genes = 20,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  readable = TRUE,
+  test_type = "t"
+)
+#> 
+#> 
+#> Warning: Skipping GO for method 'None', cluster 'FbTrt': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'None', cluster 'Hbl_VS': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'None', cluster 'L1_HPFmo_Mngs': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'None', cluster 'OB_1': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'SpaNorm', cluster 'Hbl_VS': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'SpaNorm', cluster 'L1_HPFmo_Mngs': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'SpaNorm', cluster 'LSX_HY_MB_HB': fewer than 20 DE genes.
+#> Warning: Skipping GO for method 'SpaNorm', cluster 'OB_1': fewer than 20 DE genes.
+```

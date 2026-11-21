@@ -7,3 +7,6 @@
 ^\.github$
 ^doc$
 ^Meta$
+^STBench\.BiocCheck$
+^thesis-analysis$
+^thesis_analysis$

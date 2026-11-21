@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">STBench</a>
 
@@ -18,10 +18,15 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/STBench-workflow.html">Benchmarking normalisation methods with STBench</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/biological-interpretation.html">Biological interpretation and cell-cell communication with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/svg-analysis.html">Spatially variable gene analysis with STBench</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Lahiru-lsb/STBench/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -59,10 +64,17 @@
 
         <dt>
 
-          <code><a href="calculate_ari.html">calculate_ari()</a></code>
+          <code><a href="calculate_clustering_metrics.html">calculate_clustering_metrics()</a></code>
 
         </dt>
-        <dd>Calculate adjusted Rand index</dd>
+        <dd>Calculate BANKSY clustering evaluation metrics</dd>
+
+        <dt>
+
+          <code><a href="calculate_gene_selection_metrics.html">calculate_gene_selection_metrics()</a></code>
+
+        </dt>
+        <dd>Calculate clustering metrics across gene-selection strategies</dd>
 
         <dt>
 
@@ -98,6 +110,20 @@
 
         </dt>
         <dd>Calculate UMAP embeddings across normalisation methods</dd>
+
+        <dt>
+
+          <code><a href="norm_ccc_example.html">norm_ccc_example</a></code>
+
+        </dt>
+        <dd>Example normalised data for cell-cell communication</dd>
+
+        <dt>
+
+          <code><a href="norm_example.html">norm_example</a></code>
+
+        </dt>
+        <dd>Example normalised spatial transcriptomics datasets</dd>
 
         <dt>
 
@@ -150,13 +176,6 @@
 
         <dt>
 
-          <code><a href="plot_ari.html">plot_ari()</a></code>
-
-        </dt>
-        <dd>Plot adjusted Rand index</dd>
-
-        <dt>
-
           <code><a href="plot_ccc_circle.html">plot_ccc_circle()</a></code>
 
         </dt>
@@ -192,6 +211,20 @@
 
         <dt>
 
+          <code><a href="plot_clustering_metrics.html">plot_clustering_metrics()</a></code>
+
+        </dt>
+        <dd>Plot clustering metrics across normalisation methods</dd>
+
+        <dt>
+
+          <code><a href="plot_gene_selection_metrics.html">plot_gene_selection_metrics()</a></code>
+
+        </dt>
+        <dd>Plot BANKSY gene-selection clustering metrics</dd>
+
+        <dt>
+
           <code><a href="plot_go.html">plot_go()</a></code>
 
         </dt>
@@ -213,6 +246,34 @@
 
         <dt>
 
+          <code><a href="plot_marker_auc.html">plot_marker_auc()</a></code>
+
+        </dt>
+        <dd>Plot marker-gene discrimination across methods</dd>
+
+        <dt>
+
+          <code><a href="plot_marker_expression.html">plot_marker_expression()</a></code>
+
+        </dt>
+        <dd>Plot marker expression across normalisation methods</dd>
+
+        <dt>
+
+          <code><a href="plot_marker_ttest.html">plot_marker_ttest()</a></code>
+
+        </dt>
+        <dd>Compare Marker Gene Expression Between Cell Groups</dd>
+
+        <dt>
+
+          <code><a href="plot_normalization_ranking.html">plot_normalization_ranking()</a></code>
+
+        </dt>
+        <dd>Plot normalisation method ranking</dd>
+
+        <dt>
+
           <code><a href="plot_qc.html">plot_qc()</a></code>
 
         </dt>
@@ -224,6 +285,13 @@
 
         </dt>
         <dd>Plot QC cutoff effects</dd>
+
+        <dt>
+
+          <code><a href="plot_qc_removed_spots.html">plot_qc_removed_spots()</a></code>
+
+        </dt>
+        <dd>Plot Spatial Distribution of Removed QC Spots</dd>
 
         <dt>
 
@@ -269,6 +337,20 @@
 
         <dt>
 
+          <code><a href="plot_svg_rank_correlation.html">plot_svg_rank_correlation()</a></code>
+
+        </dt>
+        <dd>Plot SVG Rank Correlation Across Normalisation Methods</dd>
+
+        <dt>
+
+          <code><a href="plot_svg_rank_vs_stat.html">plot_svg_rank_vs_stat()</a></code>
+
+        </dt>
+        <dd>Plot SVG Rank Against SVG Statistic</dd>
+
+        <dt>
+
           <code><a href="plot_svg_stat.html">plot_svg_stat()</a></code>
 
         </dt>
@@ -290,10 +372,24 @@
 
         <dt>
 
+          <code><a href="rank_normalization_methods.html">rank_normalization_methods()</a></code>
+
+        </dt>
+        <dd>Rank normalisation methods by overall clustering agreement</dd>
+
+        <dt>
+
           <code><a href="run_annotation.html">run_annotation()</a></code>
 
         </dt>
         <dd>Run cell-type annotation</dd>
+
+        <dt>
+
+          <code><a href="run_banksy_gene_selection.html">run_banksy_gene_selection()</a></code>
+
+        </dt>
+        <dd>Run BANKSY with different gene-selection strategies</dd>
 
         <dt>
 
@@ -315,12 +411,26 @@
 
         </dt>
         <dd>Run spatially variable gene detection</dd>
+
+        <dt>
+
+          <code><a href="spe_example.html">spe_example</a></code>
+
+        </dt>
+        <dd>Example spatial transcriptomics dataset</dd>
+
+        <dt>
+
+          <code><a href="svg_example.html">svg_example</a></code>
+
+        </dt>
+        <dd>Example spatially variable gene results</dd>
       </dl></div>
   </main></div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Your Name.</p>
+  <p>Developed by Lahiru Boyagoda.</p>
 </div>
 
 <div class="pkgdown-footer-right">

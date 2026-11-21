@@ -1,6 +1,4 @@
-
 # SVG detection
-
 
 
 #' Run spatially variable gene detection
@@ -11,17 +9,29 @@
 #'
 #' @return Named list containing SVG results.
 #'
+#' @examples
+#' data(norm_example)
+#'
+#' svg_results <- run_svg(
+#'   norm_list = norm_example,
+#'   method = "nnSVG",
+#'   n_threads = 1,
+#'   verbose = FALSE
+#' )
+#'
+#' names(svg_results)
+#' head(as.data.frame(
+#'   SummarizedExperiment::rowData(svg_results[[1]])
+#' ))
 #' @export
 run_svg <- function(
-    norm_list,
-    method = "nnSVG",
-    ...
+  norm_list,
+  method = "nnSVG",
+  ...
 ) {
-
   .check_named_list(norm_list)
 
   if (method != "nnSVG") {
-
     stop(
       "Currently supported SVG method: nnSVG"
     )
@@ -30,7 +40,6 @@ run_svg <- function(
   out <- lapply(
     norm_list,
     function(spe) {
-
       nnSVG::nnSVG(
         spe,
         ...

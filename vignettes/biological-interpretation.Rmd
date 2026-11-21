@@ -1,0 +1,253 @@
+---
+title: "Biological interpretation and cell-cell communication with STBench"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Biological interpretation and cell-cell communication with STBench}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 5,
+  message = FALSE,
+  warning = FALSE
+)
+library(STBench)
+```
+
+# Introduction
+
+We identify genes associated with annotated cell types and perform Gene Ontology (GO) Biological Process enrichment using the mouse annotation database `org.Mm.eg.db`. The example dataset is small, and statistical significance or detectable signalling cannot be guaranteed. 
+
+```{r load-data}
+data(norm_ccc_example)
+norm <- norm_ccc_example
+names(norm)
+```
+
+# Differential expression and GO enrichment
+
+The region-specific differential-expression analysis uses a configurable test, including an FDR cutoff of 0.05.
+
+```{r go-analysis}
+go_result <- calculate_go(
+  norm_list = norm,
+  cluster_col = "Main_molecular_tissue_region",
+  methods = names(norm),
+  assay_name = "logcounts",
+  OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.5,
+  min_spots = 10,
+  min_genes = 5,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  readable = TRUE,
+  test_type = "t"
+)
+
+names(go_result)
+head(go_result$genes)
+head(go_result$go)
+```
+
+## Visualise enriched biological processes
+
+For each region and normalisation method, we visualise the five most significant GO terms. The `top_n` argument controls the displayed terms; the original enrichment results remain available in `go_result`.
+
+```{r go-plot}
+if (nrow(go_result$go) > 0L) {
+  p_go <- plot_go(
+    go_result = go_result,
+    top_n = 5,
+    method_col = "method",
+    cluster_col = "cluster",
+    point_size_range = c(2, 7),
+    theme_name = "classic",
+    title = "GO enrichment",
+    ncol = 2
+  )
+  print(p_go$plot)
+} else {
+  message("No significant GO terms were detected in the example data.")
+}
+```
+
+## Visualise differential-expression genes
+
+These plots display significant DE genes used as input to GO enrichment, even when no GO terms reach significance.
+
+```{r go-genes}
+if (nrow(go_result$genes) > 0L) {
+  p_go_genes <- plot_go_genes(
+    go_result = go_result,
+    top_n = 5,
+    method_col = "method",
+    cluster_col = "cluster",
+    gene_col = "gene",
+    point_size = 3,
+    theme_name = "classic"
+  )
+  print(p_go_genes$plot)
+} else {
+  message("No significant DE genes were detected in the example data.")
+}
+```
+
+## Visualise GO enrichment results
+
+We visualise the five most significant GO Biological Process terms
+for each cell type and normalisation method. Point size represents
+the number of genes associated with each GO term, while colour
+represents the adjusted p-value.
+
+```{r go-enrichment-plot, fig.width=12, fig.height=8}
+if (nrow(go_result$go) > 0L) {
+
+  p_go <- plot_go(
+    go_result = go_result,
+    top_n = 5,
+    method_col = "method",
+    cluster_col = "cluster",
+    method_order = NULL,
+    point_size_range = c(2, 7),
+    theme_name = "classic",
+    methods = NULL,
+    title = "GO enrichment across mouse brain regions",
+    subtitle = NULL,#"Comparison across normalisation methods",
+    ncol = 3
+  )
+
+  p_go$plot
+
+}
+```
+
+# Cell-cell communication analysis
+
+CellChat is applied independently to each normalised dataset using the same analysis parameters. This allows us to investigate variation in inferred communication patterns across normalisation methods.
+
+## Prepare data for CellChat
+
+For the mouse example data, we use the mouse CellChat database. Spatial scaling factors and interaction distances must be validated for the coordinate units and spatial technology. The values below are illustrative.
+
+```{r ccc-prepare}
+data("CellChatDB.mouse", package = "CellChat")
+ccc_database <- CellChat::CellChatDB.mouse
+ccc_spe <- norm
+
+celltype_col <- "cell_type"
+spatial_factors <- data.frame(ratio = 0.5, tol = 12.5)
+interaction_range <- 250
+contact_range <- 25
+```
+
+## Run CellChat across normalisation methods
+
+This workflow requires CellChat and sufficient ligand-receptor genes. An error is informative if the small example contains too few supported interactions.
+
+```{r ccc-run}
+ccc_results <- run_ccc(
+  spelist = ccc_spe,
+  celltype_col = celltype_col,
+  database = ccc_database,
+  spatial_factors = spatial_factors,
+  interaction_range = interaction_range,
+  contact_range = contact_range,
+  assay_name = "logcounts",
+  nboot = 10,
+  min_cells = 5,
+  trim = 0.1,
+  scale_distance = 0.1,
+  variable_both = FALSE,
+  verbose = FALSE
+)
+```
+
+## Compare signalling pathway strengths
+
+Pathway strengths are summarised using communication probabilities returned by CellChat.
+
+```{r ccc-pathways}
+p_ccc_pathways <- plot_ccc_pathways(
+  ccc_result = ccc_results,
+  top_n = 4,
+  method_order = names(ccc_results),
+  log_scale = FALSE
+)
+p_ccc_pathways
+```
+
+## Compare ligand-receptor interactions
+
+This comparison examines differences in individual inferred interactions and their associated signalling pathways.
+
+```{r ccc-lr}
+p_ccc_lr <- plot_ccc_lr(
+  ccc_result = ccc_results,
+  top_n = 15,
+  method_order = names(ccc_results),
+  log_scale = FALSE
+)
+p_ccc_lr
+```
+
+## Compare sender-receiver communication
+
+Communication between sender and receiver cell-type groups is summarised for each normalisation method.
+
+```{r ccc-sender-receiver}
+p_ccc_sender_receiver <- plot_ccc_sender_receiver(
+  ccc_result = ccc_results,
+  methods = names(ccc_results),
+  method_order = names(ccc_results)
+)
+p_ccc_sender_receiver
+```
+
+## Visualise pathway-specific communication networks
+
+The following code visualises a detected signalling pathway using CellChat's circle layout.
+
+```{r ccc-circle}
+detected_pathways <- unique(unlist(lapply(
+  ccc_results,
+  function(x) x$cellchat@netP$pathways
+)))
+
+if (length(detected_pathways) > 0L) {
+  pathway <- detected_pathways[1]
+  for (method in names(ccc_results)) {
+    cellchat <- ccc_results[[method]]$cellchat
+    if (!is.null(cellchat) && pathway %in% cellchat@netP$pathways) {
+      CellChat::netVisual_aggregate(
+        cellchat,
+        signaling = pathway,
+        layout = "circle"
+      )
+    }
+  }
+}
+```
+
+# Summary
+
+These analyses provide a framework for evaluating the sensitivity of inferred cell-cell communication patterns to different normalisation methods.
+
+The comparisons describe differences in computationally inferred communication and should not be interpreted as direct evidence of biological signalling changes.
+
+# Session information
+
+```{r session-info}
+sessionInfo()
+```

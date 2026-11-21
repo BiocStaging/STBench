@@ -4,10 +4,11 @@ Title: Normalisation and Benchmarking for Spatial Transcriptomics
 Version: 0.1.0
 Authors@R:
     person(
-        given = "Your",
-        family = "Name",
+        given = "Lahiru",
+        family = "Boyagoda",
         role = c("aut", "cre"),
-        email = "your@email.com"
+        email = "lahiru.s.sandaruwan@gmail.com",
+        comment = c(ORCID = "0009-0003-1367-2279")
     )
 Description: Provides a unified framework for applying and benchmarking
     normalisation methods for spatial transcriptomics data. The package
@@ -40,7 +41,9 @@ Imports:
     tidyr,
     tidyselect,
     pROC,
-    grid
+    cluster,
+    stats,
+    withr
 Suggests:
     tibble,
     nnSVG,
@@ -49,12 +52,18 @@ Suggests:
     Banksy,
     knitr,
     rmarkdown,
-    testthat,
+    testthat (>= 3.0.0),
     CellChat,
     aricode,
-    clevr
+    clevr,
+    org.Mm.eg.db,
+    presto
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr
 biocViews: Spatial, GeneExpression, Normalization,
-    QualityControl, Visualization, Clustering
+    QualityControl, Visualization, Clustering, Transcriptomics
 BugReports: https://github.com/Lahiru-lsb/STBench/issues
+Depends: 
+    R (>= 4.5)
+LazyData: false
+Config/testthat/edition: 3

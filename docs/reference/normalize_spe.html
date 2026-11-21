@@ -3,7 +3,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-primary" data-bs-theme="dark" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">STBench</a>
 
@@ -18,10 +18,15 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/STBench-workflow.html">Benchmarking normalisation methods with STBench</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/biological-interpretation.html">Biological interpretation and cell-cell communication with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/svg-analysis.html">Spatially variable gene analysis with STBench</a></li>
   </ul></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/Lahiru-lsb/STBench/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -31,7 +36,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Apply multiple normalisation methods</h1>
-
+      <small class="dont-index">Source: <a href="https://github.com/Lahiru-lsb/STBench/blob/HEAD/R/normalization_runner.R" class="external-link"><code>R/normalization_runner.R</code></a></small>
       <div class="d-none name"><code>normalize_spe.Rd</code></div>
     </div>
 
@@ -71,12 +76,75 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">spe_example</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">norm</span> <span class="op">&lt;-</span> <span class="fu">normalize_spe</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">spe</span>,</span></span>
-<span class="r-in"><span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"scran"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">spe_example</span>,</span></span>
+<span class="r-in"><span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"None"</span>, <span class="st">"SpaNorm"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    spanorm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      sample_p <span class="op">=</span> <span class="fl">0.15</span>,</span></span>
+<span class="r-in"><span>      df_tps <span class="op">=</span> <span class="fl">6</span>,</span></span>
+<span class="r-in"><span>      adj_method <span class="op">=</span> <span class="st">"logpac"</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> norm_none completed in 0.001 mins</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> (1/2) Fitting SpaNorm model</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>more singular values/vectors requested than available</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>You're computing too large a percentage of total singular values, use a standard svd instead.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>did not converge--results might be invalid!; try increasing work or maxit</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>encountered non-positive size factor estimates</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>encountered non-positive size factor estimates</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>encountered non-positive size factor estimates</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>encountered non-positive size factor estimates</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>encountered non-positive size factor estimates</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> 944 cells/spots sampled to fit model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, estimating gene-wise dispersion</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, log-likelihood: -22005.930127</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, fitting NB model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  1, log-likelihood: -22005.930127</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  2, log-likelihood: -19566.704287</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  3, log-likelihood: -18244.866630</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  4, log-likelihood: -17469.350498</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  5, log-likelihood: -17126.983282</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  6, log-likelihood: -16972.268055</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  7, log-likelihood: -16921.251322</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  8, log-likelihood: -16879.850748</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter:  9, log-likelihood: -16860.633883</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter: 10, log-likelihood: -16852.821303</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  1, iter: 11, log-likelihood: -16852.733699 (converged)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, estimating gene-wise dispersion</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, log-likelihood: -16670.454257</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, fitting NB model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, iter:  1, log-likelihood: -16670.454257</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, iter:  2, log-likelihood: -16623.611272</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, iter:  2, log-likelihood: -16623.611272</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, iter:  2, log-likelihood: -16623.611272</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  2, iter:  3, log-likelihood: -16623.611272 (converged)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, estimating gene-wise dispersion</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, fitting NB model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  3, iter:  3, log-likelihood: -16621.106109 (converged)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, estimating gene-wise dispersion</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, fitting NB model</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  1, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  2, log-likelihood: -16621.106109</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  4, iter:  3, log-likelihood: -16621.106109 (converged)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> iter:  5, log-likelihood: -16621.106109 (converged)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> (2/2) Normalising data</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> norm_spanorm completed in 0.083 mins</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -85,7 +153,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Your Name.</p>
+  <p>Developed by Lahiru Boyagoda.</p>
 </div>
 
 <div class="pkgdown-footer-right">

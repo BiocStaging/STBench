@@ -37,3 +37,24 @@ plot.
 ## Details
 
 The function can be used before or after filtering.
+
+## Examples
+
+``` r
+data(spe_example)
+
+spe_qc <- add_qcs(
+  spe_example,
+  assay_name = "counts",
+  mito_pattern = "^MT-"
+)
+
+p_qc <- plot_qc(
+  spe_qc,
+  bins = 45,
+  show_density = TRUE,
+  theme_name = "classic"
+)
+
+p_qc$plot
+```

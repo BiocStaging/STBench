@@ -1,6 +1,4 @@
-
 # GO analysis from cluster-specific DE genes
-
 
 
 #' Calculate GO enrichment from cluster-specific DE genes
@@ -39,6 +37,8 @@
 #' @param readable Logical indicating whether gene IDs should
 #'   be converted to readable symbols.
 #'
+#' @param test_type Statistical test used for differential expression
+#'   analysis in `scran::findMarkers()`. Default is `"wilcox"`.
 #' @return A list containing:
 #' \itemize{
 #'   \item `markers`: full marker results for each method.
@@ -47,28 +47,48 @@
 #'   \item `universe`: background genes for each method.
 #' }
 #'
+#' @examples
+#' data(norm_ccc_example)
+#'
+#' go_result <- calculate_go(
+#'   norm_list = norm_ccc_example,
+#'   cluster_col = "layer_guess",
+#'   methods = names(norm_ccc_example),
+#'   assay_name = "logcounts",
+#'   OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+#'   key_type = "SYMBOL",
+#'   ont = "BP",
+#'   fdr_cutoff = 0.05,
+#'   min_prop = 0.4,
+#'   min_spots = 10,
+#'   min_genes = 20,
+#'   pvalue_cutoff = 0.05,
+#'   qvalue_cutoff = 0.05,
+#'   p_adjust_method = "BH",
+#'   readable = TRUE,
+#'   test_type = "t"
+#' )
 #' @export
 calculate_go <- function(
-    norm_list,
-    cluster_col = "banksy_cluster",
-    methods = names(norm_list),
-    assay_name = "logcounts",
-    OrgDb,
-    key_type = "SYMBOL",
-    ont = "BP",
-    fdr_cutoff = 0.05,
-    min_prop = 0.7,
-    min_spots = 30,
-    min_genes = 10,
-    pvalue_cutoff = 0.05,
-    qvalue_cutoff = 0.05,
-    p_adjust_method = "BH",
-    readable = TRUE
+  norm_list,
+  cluster_col = "banksy_cluster",
+  methods = names(norm_list),
+  assay_name = "logcounts",
+  OrgDb,
+  key_type = "SYMBOL",
+  ont = "BP",
+  fdr_cutoff = 0.05,
+  min_prop = 0.7,
+  min_spots = 30,
+  min_genes = 10,
+  pvalue_cutoff = 0.05,
+  qvalue_cutoff = 0.05,
+  p_adjust_method = "BH",
+  test_type = "wilcox",
+  readable = TRUE
 ) {
-
-  # ----------------------------------------------------------
   # Check input
-  # ----------------------------------------------------------
+
 
   .check_named_list(
     norm_list
@@ -82,7 +102,6 @@ calculate_go <- function(
 
 
   if (length(missing_methods) > 0) {
-
     stop(
       "The following methods are not present in 'norm_list': ",
       paste(
@@ -93,9 +112,8 @@ calculate_go <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Initialise output
-  # ----------------------------------------------------------
+
 
   marker_results <- list()
 
@@ -106,18 +124,15 @@ calculate_go <- function(
   universe_list <- list()
 
 
-  # ----------------------------------------------------------
   # Process methods
-  # ----------------------------------------------------------
+
 
   for (method in methods) {
-
     spe <- norm_list[[method]]
 
 
-    # --------------------------------------------------------
     # Check SPE
-    # --------------------------------------------------------
+
 
     if (
       !methods::is(
@@ -125,7 +140,6 @@ calculate_go <- function(
         "SpatialExperiment"
       )
     ) {
-
       stop(
         "Each method must contain one SpatialExperiment object. ",
         "Problem detected for method: ",
@@ -134,17 +148,15 @@ calculate_go <- function(
     }
 
 
-    # --------------------------------------------------------
     # Check assay
-    # --------------------------------------------------------
+
 
     if (
       !assay_name %in%
-      SummarizedExperiment::assayNames(
-        spe
-      )
+        SummarizedExperiment::assayNames(
+          spe
+        )
     ) {
-
       stop(
         "Assay '",
         assay_name,
@@ -154,9 +166,8 @@ calculate_go <- function(
     }
 
 
-    # --------------------------------------------------------
     # Check cluster column
-    # --------------------------------------------------------
+
 
     cd <- SummarizedExperiment::colData(
       spe
@@ -165,9 +176,8 @@ calculate_go <- function(
 
     if (
       !cluster_col %in%
-      colnames(cd)
+        colnames(cd)
     ) {
-
       stop(
         "Cluster column '",
         cluster_col,
@@ -177,18 +187,16 @@ calculate_go <- function(
     }
 
 
-    # --------------------------------------------------------
     # Extract clusters
-    # --------------------------------------------------------
+
 
     clusters <- factor(
       cd[[cluster_col]]
     )
 
 
-    # --------------------------------------------------------
     # Remove missing cluster labels
-    # --------------------------------------------------------
+
 
     keep <- !is.na(
       clusters
@@ -209,9 +217,8 @@ calculate_go <- function(
     )
 
 
-    # --------------------------------------------------------
     # Filter small clusters
-    # --------------------------------------------------------
+
 
     cluster_sizes <- table(
       clusters
@@ -243,9 +250,8 @@ calculate_go <- function(
     )
 
 
-    # --------------------------------------------------------
     # Check number of clusters
-    # --------------------------------------------------------
+
 
     if (
       length(
@@ -254,7 +260,6 @@ calculate_go <- function(
         )
       ) < 2
     ) {
-
       warning(
         "Fewer than two valid clusters for method: ",
         method,
@@ -265,18 +270,16 @@ calculate_go <- function(
     }
 
 
-    # --------------------------------------------------------
     # Store gene universe
-    # --------------------------------------------------------
+
 
     universe_list[[method]] <- rownames(
       spe_use
     )
 
 
-    # --------------------------------------------------------
     # Find cluster-specific DE genes
-    # --------------------------------------------------------
+
 
     markers <- scran::findMarkers(
       spe_use,
@@ -292,12 +295,10 @@ calculate_go <- function(
     marker_results[[method]] <- markers
 
 
-    # --------------------------------------------------------
     # Process clusters
-    # --------------------------------------------------------
+
 
     for (cluster_id in names(markers)) {
-
       marker_df <- as.data.frame(
         markers[[cluster_id]]
       )
@@ -308,16 +309,14 @@ calculate_go <- function(
       )
 
 
-      # ------------------------------------------------------
       # Significant DE genes
-      # ------------------------------------------------------
+
 
       marker_df <- marker_df[
         !is.na(
           marker_df$FDR
         ) &
-          marker_df$FDR < fdr_cutoff,
-        ,
+          marker_df$FDR < fdr_cutoff, ,
         drop = FALSE
       ]
 
@@ -325,51 +324,40 @@ calculate_go <- function(
       marker_df <- marker_df[
         order(
           marker_df$FDR
-        ),
-        ,
+        ), ,
         drop = FALSE
       ]
 
 
-      # ------------------------------------------------------
       # Skip empty results
-      # ------------------------------------------------------
+
 
       if (nrow(marker_df) == 0) {
-
         next
       }
 
 
-      # ------------------------------------------------------
       # Store genes
-      # ------------------------------------------------------
+
 
       gene_df <- data.frame(
-
         method = method,
-
         cluster = as.character(
           cluster_id
         ),
-
         gene = marker_df$gene,
-
         FDR = marker_df$FDR,
-
         rank = seq_len(
           nrow(marker_df)
         ),
-
         stringsAsFactors = FALSE
       )
 
 
       if (
         "summary.logFC" %in%
-        colnames(marker_df)
+          colnames(marker_df)
       ) {
-
         gene_df$logFC <-
           marker_df$summary.logFC
       }
@@ -384,15 +372,13 @@ calculate_go <- function(
       ]] <- gene_df
 
 
-      # ------------------------------------------------------
       # Minimum genes for GO
-      # ------------------------------------------------------
+
 
       genes <- marker_df$gene
 
 
       if (length(genes) < min_genes) {
-
         warning(
           "Skipping GO for method '",
           method,
@@ -408,9 +394,8 @@ calculate_go <- function(
       }
 
 
-      # ------------------------------------------------------
       # GO enrichment
-      # ------------------------------------------------------
+
 
       go_result <- clusterProfiler::enrichGO(
         gene = genes,
@@ -431,14 +416,12 @@ calculate_go <- function(
 
 
       if (nrow(go_df) == 0) {
-
         next
       }
 
 
-      # ------------------------------------------------------
       # Add identifiers
-      # ------------------------------------------------------
+
 
       go_df$method <- method
 
@@ -447,9 +430,8 @@ calculate_go <- function(
       )
 
 
-      # ------------------------------------------------------
       # Numeric gene ratio
-      # ------------------------------------------------------
+
 
       ratio_parts <- strsplit(
         go_df$GeneRatio,
@@ -461,7 +443,6 @@ calculate_go <- function(
       go_df$GeneRatio_numeric <- vapply(
         ratio_parts,
         function(x) {
-
           as.numeric(
             x[1]
           ) /
@@ -473,18 +454,16 @@ calculate_go <- function(
       )
 
 
-      # ------------------------------------------------------
       # -log10 adjusted p-value
-      # ------------------------------------------------------
+
 
       go_df$log10_padj <- -log10(
         go_df$p.adjust
       )
 
 
-      # ------------------------------------------------------
       # Store GO results
-      # ------------------------------------------------------
+
 
       go_list[[
         paste(
@@ -497,40 +476,32 @@ calculate_go <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Combine DE genes
-  # ----------------------------------------------------------
+
 
   if (length(gene_list) > 0) {
-
     genes <- do.call(
       rbind,
       gene_list
     )
 
     rownames(genes) <- NULL
-
   } else {
-
     genes <- data.frame()
   }
 
 
-  # ----------------------------------------------------------
   # Combine GO results
-  # ----------------------------------------------------------
+
 
   if (length(go_list) > 0) {
-
     go <- do.call(
       rbind,
       go_list
     )
 
     rownames(go) <- NULL
-
   } else {
-
     go <- data.frame()
 
     warning(
@@ -540,9 +511,8 @@ calculate_go <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
+
 
   list(
     markers = marker_results,
@@ -553,11 +523,7 @@ calculate_go <- function(
 }
 
 
-
-
-
 # Plot GO enrichment
-
 
 
 #' Plot GO enrichment results
@@ -585,38 +551,64 @@ calculate_go <- function(
 #' @return A list containing plotting data, full GO data,
 #'   and the plot.
 #'
+#' @examples
+#' data(norm_ccc_example)
+#'
+#' go_result <- calculate_go(
+#'   norm_list = norm_ccc_example,
+#'   cluster_col = "layer_guess",
+#'   methods = names(norm_ccc_example),
+#'   assay_name = "logcounts",
+#'   OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+#'   key_type = "SYMBOL",
+#'   ont = "BP",
+#'   fdr_cutoff = 0.05,
+#'   min_prop = 0.4,
+#'   min_spots = 10,
+#'   min_genes = 5,
+#'   pvalue_cutoff = 0.05,
+#'   qvalue_cutoff = 0.05,
+#'   p_adjust_method = "BH",
+#'   readable = TRUE,
+#'   test_type = "t"
+#' )
+#'
+#' p_go <- plot_go(
+#'   go_result = go_result,
+#'   top_n = 5,
+#'   method_col = "method",
+#'   cluster_col = "cluster",
+#'   point_size_range = c(2, 7),
+#'   theme_name = "classic",
+#'   ncol = 2
+#' )
+#'
+#' p_go$plot
 #' @export
 plot_go <- function(
-    go_result,
-    top_n = 5,
-    method_col = "method",
-    cluster_col = "cluster",
-    method_order = NULL,
-    point_size_range = c(2, 7),
-    theme_name = "classic",
-    methods = NULL,
-    title = NULL,
-    subtitle = NULL,
-    ncol = 3
+  go_result,
+  top_n = 5,
+  method_col = "method",
+  cluster_col = "cluster",
+  method_order = NULL,
+  point_size_range = c(2, 7),
+  theme_name = "classic",
+  methods = NULL,
+  title = NULL,
+  subtitle = NULL,
+  ncol = 3
 ) {
-
-  # ----------------------------------------------------------
   # Extract GO data
-  # ----------------------------------------------------------
+
 
   if (
     is.list(go_result) &&
-    "go" %in% names(go_result)
+      "go" %in% names(go_result)
   ) {
-
     df <- go_result$go
-
   } else if (is.data.frame(go_result)) {
-
     df <- go_result
-
   } else {
-
     stop(
       "'go_result' must be the output from ",
       "'calculate_go()' or a GO data frame."
@@ -624,9 +616,8 @@ plot_go <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Check data
-  # ----------------------------------------------------------
+
 
   if (nrow(df) == 0) {
     stop("No GO enrichment results are available.")
@@ -655,9 +646,8 @@ plot_go <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Select methods
-  # ----------------------------------------------------------
+
 
   available_methods <- unique(
     as.character(df[[method_col]])
@@ -680,7 +670,6 @@ plot_go <- function(
   }
 
   if (!is.null(method_order)) {
-
     methods <- c(
       intersect(method_order, methods),
       setdiff(methods, method_order)
@@ -688,31 +677,27 @@ plot_go <- function(
   }
 
   df <- df[
-    df[[method_col]] %in% methods,
-    ,
+    df[[method_col]] %in% methods, ,
     drop = FALSE
   ]
 
 
-  # ----------------------------------------------------------
   # Retain full selected GO results
-  # ----------------------------------------------------------
+
 
   full_df <- df
 
 
-  # ----------------------------------------------------------
   # Select top GO terms
-  # ----------------------------------------------------------
+
 
   if (!is.null(top_n)) {
-
     if (
       length(top_n) != 1 ||
-      !is.numeric(top_n) ||
-      is.na(top_n) ||
-      top_n < 1 ||
-      top_n != floor(top_n)
+        !is.numeric(top_n) ||
+        is.na(top_n) ||
+        top_n < 1 ||
+        top_n != floor(top_n)
     ) {
       stop("top_n must be a positive integer or NULL.")
     }
@@ -729,10 +714,8 @@ plot_go <- function(
     plot_list <- lapply(
       split_df,
       function(x) {
-
         x <- x[
-          order(x$p.adjust),
-          ,
+          order(x$p.adjust), ,
           drop = FALSE
         ]
 
@@ -747,18 +730,15 @@ plot_go <- function(
       rbind,
       plot_list
     )
-
   } else {
-
     plot_df <- df
   }
 
   rownames(plot_df) <- NULL
 
 
-  # ----------------------------------------------------------
   # Factor ordering
-  # ----------------------------------------------------------
+
 
   plot_df[[method_col]] <- factor(
     plot_df[[method_col]],
@@ -770,9 +750,8 @@ plot_go <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Plot
-  # ----------------------------------------------------------
+
 
   p <- ggplot2::ggplot(
     plot_df,
@@ -827,9 +806,8 @@ plot_go <- function(
     )
 
 
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
+
 
   return(
     list(
@@ -841,10 +819,7 @@ plot_go <- function(
 }
 
 
-
-
 # Plot DE genes used for GO
-
 
 
 #' Plot cluster-specific DE genes used for GO
@@ -870,37 +845,65 @@ plot_go <- function(
 #'
 #' @return A list containing plotting data and plot.
 #'
+#' @examples
+#' data(norm_ccc_example)
+#'
+#' go_result <- calculate_go(
+#'   norm_list = norm_ccc_example,
+#'   cluster_col = "layer_guess",
+#'   methods = names(norm_ccc_example),
+#'   assay_name = "logcounts",
+#'   OrgDb = org.Mm.eg.db::org.Mm.eg.db,
+#'   key_type = "SYMBOL",
+#'   ont = "BP",
+#'   fdr_cutoff = 0.05,
+#'   min_prop = 0.4,
+#'   min_spots = 10,
+#'   min_genes = 5,
+#'   pvalue_cutoff = 0.05,
+#'   qvalue_cutoff = 0.05,
+#'   p_adjust_method = "BH",
+#'   readable = TRUE,
+#'   test_type = "t"
+#' )
+#'
+#' if (nrow(go_result$genes) > 0L) {
+#'   p_go_genes <- plot_go_genes(
+#'     go_result = go_result,
+#'     top_n = 5,
+#'     method_col = "method",
+#'     cluster_col = "cluster",
+#'     gene_col = "gene",
+#'     point_size = 3,
+#'     theme_name = "classic"
+#'   )
+#'
+#'   p_go_genes$plot
+#' }
 #' @export
 plot_go_genes <- function(
-    go_result,
-    top_n = 5,
-    method_col = "method",
-    cluster_col = "cluster",
-    gene_col = "gene",
-    method_order = NULL,
-    point_size = 3,
-    palette = NULL,
-    theme_name = "classic"
+  go_result,
+  top_n = 5,
+  method_col = "method",
+  cluster_col = "cluster",
+  gene_col = "gene",
+  method_order = NULL,
+  point_size = 3,
+  palette = NULL,
+  theme_name = "classic"
 ) {
-
-  # ----------------------------------------------------------
   # Extract gene data
-  # ----------------------------------------------------------
+
 
   if (
     is.list(go_result) &&
-    "genes" %in%
-    names(go_result)
+      "genes" %in%
+        names(go_result)
   ) {
-
     df <- go_result$genes
-
   } else if (is.data.frame(go_result)) {
-
     df <- go_result
-
   } else {
-
     stop(
       "'go_result' must be the output from 'calculate_go()' ",
       "or a DE gene data frame."
@@ -908,12 +911,10 @@ plot_go_genes <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Check data
-  # ----------------------------------------------------------
+
 
   if (nrow(df) == 0) {
-
     stop(
       "No DE genes are available to plot."
     )
@@ -935,7 +936,6 @@ plot_go_genes <- function(
 
 
   if (length(missing_cols) > 0) {
-
     stop(
       "The following required column(s) are missing: ",
       paste(
@@ -946,9 +946,8 @@ plot_go_genes <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Resolve methods
-  # ----------------------------------------------------------
+
 
   available_methods <- unique(
     as.character(
@@ -958,11 +957,8 @@ plot_go_genes <- function(
 
 
   if (is.null(method_order)) {
-
     methods <- available_methods
-
   } else {
-
     methods <- method_order[
       method_order %in%
         available_methods
@@ -972,15 +968,13 @@ plot_go_genes <- function(
 
   df <- df[
     df[[method_col]] %in%
-      methods,
-    ,
+      methods, ,
     drop = FALSE
   ]
 
 
-  # ----------------------------------------------------------
   # Select top N DE genes
-  # ----------------------------------------------------------
+
 
   split_df <- split(
     df,
@@ -995,12 +989,10 @@ plot_go_genes <- function(
   plot_list <- lapply(
     split_df,
     function(x) {
-
       x <- x[
         order(
           x$FDR
-        ),
-        ,
+        ), ,
         drop = FALSE
       ]
 
@@ -1022,9 +1014,8 @@ plot_go_genes <- function(
   rownames(plot_df) <- NULL
 
 
-  # ----------------------------------------------------------
   # Factor ordering
-  # ----------------------------------------------------------
+
 
   plot_df[[method_col]] <- factor(
     plot_df[[method_col]],
@@ -1037,9 +1028,8 @@ plot_go_genes <- function(
   )
 
 
-  # ----------------------------------------------------------
   # Plot
-  # ----------------------------------------------------------
+
 
   p <- ggplot2::ggplot(
     plot_df,
@@ -1049,11 +1039,9 @@ plot_go_genes <- function(
       colour = .data[[method_col]]
     )
   ) +
-
     ggplot2::geom_point(
       size = point_size
     ) +
-
     ggplot2::facet_wrap(
       stats::as.formula(
         paste(
@@ -1063,51 +1051,40 @@ plot_go_genes <- function(
       ),
       scales = "free_y"
     ) +
-
     ggplot2::labs(
       x = "Normalisation method",
       y = NULL,
       colour = "Method"
     ) +
-
     .get_plot_theme(
       theme_name
     ) +
-
     ggplot2::theme(
-
       panel.grid =
         ggplot2::element_blank(),
-
       strip.background =
         ggplot2::element_blank(),
-
       strip.text =
         ggplot2::element_text(
           size = 9
         ),
-
       axis.text.x =
         ggplot2::element_text(
           angle = 45,
           hjust = 1
         ),
-
       axis.text.y =
         ggplot2::element_text(
           size = 8
         ),
-
       legend.position = "right"
     )
 
 
-  # ----------------------------------------------------------
   # Optional palette
-  # ----------------------------------------------------------
+
 
   if (!is.null(palette)) {
-
     p <- p +
 
       ggplot2::scale_colour_manual(
@@ -1116,9 +1093,8 @@ plot_go_genes <- function(
   }
 
 
-  # ----------------------------------------------------------
   # Return
-  # ----------------------------------------------------------
+
 
   list(
     data = plot_df,
