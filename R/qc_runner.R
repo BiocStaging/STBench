@@ -28,6 +28,7 @@
 #'   assay_name = "counts",
 #'   mito_pattern = "^MT-"
 #' )
+#' #' @import sparseMatrixStats
 #' @export
 add_qcs <- function(
   spe,

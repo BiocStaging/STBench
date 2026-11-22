@@ -37,6 +37,7 @@
 #' )
 #'
 #' p_ls$plot
+#' @import sparseMatrixStats
 #' @export
 plot_library_size_comparison <- function(
   norm,

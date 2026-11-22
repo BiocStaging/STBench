@@ -44,7 +44,8 @@ Imports:
     pROC,
     cluster,
     stats,
-    withr
+    withr,
+    sparseMatrixStats
 Suggests:
     tibble,
     nnSVG,
