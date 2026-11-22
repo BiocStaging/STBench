@@ -33,30 +33,33 @@ A ggplot object.
 Plot CCC signaling pathway strength
 }
 \examples{
-data(norm_ccc_example)
-data("CellChatDB.mouse", package = "CellChat")
+if (requireNamespace("CellChat", quietly = TRUE)) {
 
-ccc_results <- run_ccc(
-  spelist = norm_ccc_example,
-  celltype_col = "cell_type",
-  database = CellChat::CellChatDB.mouse,
-  spatial_factors = data.frame(
-    ratio = 0.5,
-    tol = 12.5
-  ),
-  interaction_range = 250,
-  contact_range = 25,
-  nboot = 10,
-  min_cells = 5,
-  verbose = FALSE
-)
+  data(norm_ccc_example)
+  data("CellChatDB.mouse", package = "CellChat")
 
-p <- plot_ccc_pathways(
-  ccc_result = ccc_results,
-  top_n = 4,
-  method_order = names(ccc_results),
-  log_scale = FALSE
-)
+  ccc_results <- run_ccc(
+    spelist = norm_ccc_example,
+    celltype_col = "cell_type",
+    database = CellChat::CellChatDB.mouse,
+    spatial_factors = data.frame(
+      ratio = 0.5,
+      tol = 12.5
+    ),
+    interaction_range = 250,
+    contact_range = 25,
+    nboot = 10,
+    min_cells = 5,
+    verbose = FALSE
+  )
 
-p
+  p <- plot_ccc_pathways(
+    ccc_result = ccc_results,
+    top_n = 4,
+    method_order = names(ccc_results),
+    log_scale = FALSE
+  )
+
+  p
+}
 }

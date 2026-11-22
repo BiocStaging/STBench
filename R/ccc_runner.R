@@ -29,28 +29,32 @@
 #' @return Named list containing CellChat results for each method.
 #'
 #' @examples
-#' data(norm_ccc_example)
+#' if (requireNamespace("CellChat", quietly = TRUE)) {
 #'
-#' data("CellChatDB.mouse", package = "CellChat")
+#'   data(norm_ccc_example)
 #'
-#' ccc_results <- run_ccc(
-#'   spelist = norm_ccc_example,
-#'   celltype_col = "cell_type",
-#'   database = CellChat::CellChatDB.mouse,
-#'   spatial_factors = data.frame(
-#'     ratio = 0.5,
-#'     tol = 12.5
-#'   ),
-#'   interaction_range = 250,
-#'   contact_range = 25,
-#'   assay_name = "logcounts",
-#'   nboot = 10,
-#'   min_cells = 5,
-#'   trim = 0.1,
-#'   scale_distance = 0.1,
-#'   variable_both = FALSE,
-#'   verbose = FALSE
-#' )
+#'   data("CellChatDB.mouse", package = "CellChat")
+#'
+#'   ccc_results <- run_ccc(
+#'     spelist = norm_ccc_example,
+#'     celltype_col = "cell_type",
+#'     database = CellChat::CellChatDB.mouse,
+#'     spatial_factors = data.frame(
+#'       ratio = 0.5,
+#'       tol = 12.5
+#'     ),
+#'     interaction_range = 250,
+#'     contact_range = 25,
+#'     assay_name = "logcounts",
+#'     nboot = 10,
+#'     min_cells = 5,
+#'     trim = 0.1,
+#'     scale_distance = 0.1,
+#'     variable_both = FALSE,
+#'     verbose = FALSE
+#'   )
+#'
+#' }
 #' @export
 run_ccc <- function(
   spelist,
@@ -508,32 +512,35 @@ run_ccc <- function(
 #'
 #'
 #' @examples
-#' data(norm_ccc_example)
-#' data("CellChatDB.mouse", package = "CellChat")
+#' if (requireNamespace("CellChat", quietly = TRUE)) {
 #'
-#' ccc_results <- run_ccc(
-#'   spelist = norm_ccc_example,
-#'   celltype_col = "cell_type",
-#'   database = CellChat::CellChatDB.mouse,
-#'   spatial_factors = data.frame(
-#'     ratio = 0.5,
-#'     tol = 12.5
-#'   ),
-#'   interaction_range = 250,
-#'   contact_range = 25,
-#'   nboot = 10,
-#'   min_cells = 5,
-#'   verbose = FALSE
-#' )
+#'   data(norm_ccc_example)
+#'   data("CellChatDB.mouse", package = "CellChat")
 #'
-#' p <- plot_ccc_pathways(
-#'   ccc_result = ccc_results,
-#'   top_n = 4,
-#'   method_order = names(ccc_results),
-#'   log_scale = FALSE
-#' )
+#'   ccc_results <- run_ccc(
+#'     spelist = norm_ccc_example,
+#'     celltype_col = "cell_type",
+#'     database = CellChat::CellChatDB.mouse,
+#'     spatial_factors = data.frame(
+#'       ratio = 0.5,
+#'       tol = 12.5
+#'     ),
+#'     interaction_range = 250,
+#'     contact_range = 25,
+#'     nboot = 10,
+#'     min_cells = 5,
+#'     verbose = FALSE
+#'   )
 #'
-#' p
+#'   p <- plot_ccc_pathways(
+#'     ccc_result = ccc_results,
+#'     top_n = 4,
+#'     method_order = names(ccc_results),
+#'     log_scale = FALSE
+#'   )
+#'
+#'   p
+#' }
 #' @export
 plot_ccc_pathways <- function(
   ccc_result,
@@ -679,32 +686,35 @@ plot_ccc_pathways <- function(
 #'
 #'
 #' @examples
-#' data(norm_ccc_example)
-#' data("CellChatDB.mouse", package = "CellChat")
+#' if (requireNamespace("CellChat", quietly = TRUE)) {
 #'
-#' ccc_results <- run_ccc(
-#'   spelist = norm_ccc_example,
-#'   celltype_col = "cell_type",
-#'   database = CellChat::CellChatDB.mouse,
-#'   spatial_factors = data.frame(
-#'     ratio = 0.5,
-#'     tol = 12.5
-#'   ),
-#'   interaction_range = 250,
-#'   contact_range = 25,
-#'   nboot = 10,
-#'   min_cells = 5,
-#'   verbose = FALSE
-#' )
+#'   data(norm_ccc_example)
+#'   data("CellChatDB.mouse", package = "CellChat")
 #'
-#' p <- plot_ccc_lr(
-#'   ccc_result = ccc_results,
-#'   top_n = 15,
-#'   method_order = names(ccc_results),
-#'   log_scale = FALSE
-#' )
+#'   ccc_results <- run_ccc(
+#'     spelist = norm_ccc_example,
+#'     celltype_col = "cell_type",
+#'     database = CellChat::CellChatDB.mouse,
+#'     spatial_factors = data.frame(
+#'       ratio = 0.5,
+#'       tol = 12.5
+#'     ),
+#'     interaction_range = 250,
+#'     contact_range = 25,
+#'     nboot = 10,
+#'     min_cells = 5,
+#'     verbose = FALSE
+#'   )
 #'
-#' p
+#'   p <- plot_ccc_lr(
+#'     ccc_result = ccc_results,
+#'     top_n = 15,
+#'     method_order = names(ccc_results),
+#'     log_scale = FALSE
+#'   )
+#'
+#'   p
+#' }
 #' @export
 plot_ccc_lr <- function(
   ccc_result,
@@ -995,48 +1005,49 @@ plot_ccc_sender_receiver <- function(
 #' @return Invisibly returns NULL.
 #'
 #' @examples
+#' if (requireNamespace("CellChat", quietly = TRUE)) {
 #'
-#' data(norm_ccc_example)
-#' data("CellChatDB.mouse", package = "CellChat")
+#'   data(norm_ccc_example)
+#'   data("CellChatDB.mouse", package = "CellChat")
 #'
-#' ccc_results <- run_ccc(
-#'   spelist = norm_ccc_example,
-#'   celltype_col = "cell_type",
-#'   database = CellChat::CellChatDB.mouse,
-#'   spatial_factors = data.frame(
-#'     ratio = 0.5,
-#'     tol = 12.5
-#'   ),
-#'   interaction_range = 250,
-#'   contact_range = 25,
-#'   nboot = 10,
-#'   min_cells = 5,
-#'   verbose = FALSE
-#' )
+#'   ccc_results <- run_ccc(
+#'     spelist = norm_ccc_example,
+#'     celltype_col = "cell_type",
+#'     database = CellChat::CellChatDB.mouse,
+#'     spatial_factors = data.frame(
+#'       ratio = 0.5,
+#'       tol = 12.5
+#'     ),
+#'     interaction_range = 250,
+#'     contact_range = 25,
+#'     nboot = 10,
+#'     min_cells = 5,
+#'     verbose = FALSE
+#'   )
 #'
-#' detected_pathways <- unique(unlist(
-#'   lapply(ccc_results, function(x) {
-#'     x$cellchat@netP$pathways
-#'   })
-#' ))
+#'   detected_pathways <- unique(unlist(
+#'     lapply(ccc_results, function(x) {
+#'       x$cellchat@netP$pathways
+#'     })
+#'   ))
 #'
-#' if (length(detected_pathways) > 0L) {
-#'   pathway <- detected_pathways[1]
+#'   if (length(detected_pathways) > 0L) {
+#'     pathway <- detected_pathways[1]
 #'
-#'   for (method in names(ccc_results)) {
-#'     cellchat <- ccc_results[[method]]$cellchat
+#'     for (method in names(ccc_results)) {
+#'       cellchat <- ccc_results[[method]]$cellchat
 #'
-#'     if (!is.null(cellchat) &&
-#'       pathway %in% cellchat@netP$pathways) {
-#'       CellChat::netVisual_aggregate(
-#'         cellchat,
-#'         signaling = pathway,
-#'         layout = "circle"
-#'       )
+#'       if (!is.null(cellchat) &&
+#'         pathway %in% cellchat@netP$pathways) {
+#'         CellChat::netVisual_aggregate(
+#'           cellchat,
+#'           signaling = pathway,
+#'           layout = "circle"
+#'         )
+#'       }
 #'     }
 #'   }
 #' }
-#'
 #' @export
 plot_ccc_circle <- function(
   ccc_result,
