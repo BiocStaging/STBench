@@ -25,7 +25,11 @@ extract_svg_stats(
 }
 \value{
 Data frame.
-#' @examples
+}
+\description{
+Extract SVG statistics for selected genes
+}
+\examples{
 # Create a small SpatialExperiment object
 counts <- matrix(
   1:12,
@@ -56,7 +60,5 @@ result <- extract_svg_stats(
 )
 
 print(result)
-}
-\description{
-Extract SVG statistics for selected genes
+
 }

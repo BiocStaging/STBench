@@ -44,7 +44,7 @@
 #' p <- plot_spatial_clustering(
 #'   norm_list = banksy_norm,
 #'   cluster_col = "banksy_cluster",
-#'   ground_truth_col = "cell_type",
+#'   ground_truth_col = "layer_guess",
 #'   show = "both",
 #'   point_size = 0.5,
 #'   ncol = 2,
@@ -858,7 +858,7 @@ run_banksy_individual <- function(
 #'
 #' metrics_df <- calculate_clustering_metrics(
 #'   norm_list = banksy_norm,
-#'   ground_truth_col = "cell_type",
+#'   ground_truth_col = "layer_guess",
 #'   cluster_col = "banksy_cluster"
 #' )
 #'
@@ -1021,7 +1021,7 @@ calculate_clustering_metrics <- function(
 #'
 #' metrics_df <- calculate_clustering_metrics(
 #'   norm_list = banksy_norm,
-#'   ground_truth_col = "cell_type",
+#'   ground_truth_col = "layer_guess",
 #'   cluster_col = "banksy_cluster"
 #' )
 #'
@@ -1154,7 +1154,7 @@ plot_clustering_metrics <- function(
 #'
 #' metrics_df <- calculate_clustering_metrics(
 #'   norm_list = banksy_norm,
-#'   ground_truth_col = "cell_type"
+#'   ground_truth_col = "layer_guess"
 #' )
 #'
 #' ranking_df <- rank_normalization_methods(
@@ -1222,7 +1222,7 @@ rank_normalization_methods <- function(
 #'
 #' metrics_df <- calculate_clustering_metrics(
 #'   norm_list = banksy_norm,
-#'   ground_truth_col = "cell_type"
+#'   ground_truth_col = "layer_guess"
 #' )
 #'
 #' ranking_df <- rank_normalization_methods(
@@ -1721,7 +1721,7 @@ run_banksy_gene_selection <- function(
 #'
 #' metrics_genes <- calculate_gene_selection_metrics(
 #'   banksy_list = banksy_genes,
-#'   ground_truth_col = "cell_type"
+#'   ground_truth_col = "layer_guess"
 #' )
 #'
 #' @examples
@@ -1742,7 +1742,7 @@ run_banksy_gene_selection <- function(
 #'
 #' metrics_genes <- calculate_gene_selection_metrics(
 #'   banksy_list = banksy_list,
-#'   ground_truth_col = "cell_type",
+#'   ground_truth_col = "layer_guess",
 #'   cluster_col = "banksy_cluster",
 #'   asw_max_cells = 3000,
 #'   seed = 123
@@ -1837,7 +1837,7 @@ calculate_gene_selection_metrics <- function(
 #'
 #' metrics_genes <- calculate_gene_selection_metrics(
 #'   banksy_list = banksy_genes,
-#'   ground_truth_col = "cell_type"
+#'   ground_truth_col = "layer_guess"
 #' )
 #'
 #' p_genes <- plot_gene_selection_metrics(

@@ -144,7 +144,7 @@ These functions operate on the output of `run_banksy_individual()` above.
 p_banksy <- plot_spatial_clustering(
   norm_list = banksy_norm,
   cluster_col = "banksy_cluster",
-  ground_truth_col = "cell_type",
+  ground_truth_col = "layer_guess",
   show = "both",
   methods = names(banksy_norm),
   point_size = 0.5,
@@ -157,7 +157,7 @@ p_banksy$plot
 ```{r banksy-clustering-metrics}
 metrics_df <- calculate_clustering_metrics(
   norm_list = banksy_norm,
-  ground_truth_col = "cell_type",
+  ground_truth_col = "layer_guess",
   cluster_col = "banksy_cluster",
   methods = names(banksy_norm)
 )
@@ -206,7 +206,7 @@ banksy_genes <- run_banksy_gene_selection(
 
 metrics_genes <- calculate_gene_selection_metrics(
   banksy_list = banksy_genes,
-  ground_truth_col = "cell_type"
+  ground_truth_col = "layer_guess"
 )
 
 p_genes <- plot_gene_selection_metrics(

@@ -41,7 +41,7 @@ banksy_genes <- run_banksy_gene_selection(
 
 metrics_genes <- calculate_gene_selection_metrics(
   banksy_list = banksy_genes,
-  ground_truth_col = "cell_type"
+  ground_truth_col = "layer_guess"
 )
 }
 \description{
@@ -66,7 +66,7 @@ banksy_list <- list(all = banksy_results)
 
 metrics_genes <- calculate_gene_selection_metrics(
   banksy_list = banksy_list,
-  ground_truth_col = "cell_type",
+  ground_truth_col = "layer_guess",
   cluster_col = "banksy_cluster",
   asw_max_cells = 3000,
   seed = 123

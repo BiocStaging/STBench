@@ -101,5 +101,5 @@ norm <- normalize_spe(
 #> iter:  4, iter:  3, log-likelihood: -16621.106109 (converged)
 #> iter:  5, log-likelihood: -16621.106109 (converged)
 #> (2/2) Normalising data
-#> norm_spanorm completed in 0.083 mins
+#> norm_spanorm completed in 0.072 mins
 ```

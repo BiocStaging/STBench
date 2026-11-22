@@ -1,7 +1,7 @@
 Package: STBench
 Type: Package
 Title: Normalisation and Benchmarking for Spatial Transcriptomics
-Version: 0.1.0
+Version: 0.99.0
 Authors@R:
     person(
         given = "Lahiru",
@@ -10,11 +10,12 @@ Authors@R:
         email = "lahiru.s.sandaruwan@gmail.com",
         comment = c(ORCID = "0009-0003-1367-2279")
     )
-Description: Provides a unified framework for applying and benchmarking
+Description: Description: Provides a unified framework for applying and benchmarking
     normalisation methods for spatial transcriptomics data. The package
-    supports multiple normalisation approaches, spatially variable gene
-    analysis, marker gene evaluation, spatial expression visualisation,
-    and stable gene-set benchmarking.
+    supports quality control, spatially variable gene analysis,
+    clustering, cell-type annotation, biological interpretation,
+    visualisation, and other downstream analyses to evaluate the
+    preservation of biological signals across normalisation methods.
 License: MIT + file LICENSE
 Encoding: UTF-8
 RoxygenNote: 7.3.3
@@ -58,8 +59,6 @@ Suggests:
     clevr,
     org.Mm.eg.db,
     presto
-Remotes:
-    jinworks/CellChat
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr
 biocViews: Spatial, GeneExpression, Normalization,

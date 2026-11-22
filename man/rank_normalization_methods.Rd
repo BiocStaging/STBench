@@ -11,7 +11,12 @@ rank_normalization_methods(metrics_df)
 }
 \value{
 Data frame containing Rank, method and Overall.
-#' @examples
+}
+\description{
+Methods are ranked using the Overall score, calculated
+as the mean of NMI, HOM and COM.
+}
+\examples{
 data(norm_example)
 
 banksy_norm <- run_banksy_individual(
@@ -21,7 +26,7 @@ banksy_norm <- run_banksy_individual(
 
 metrics_df <- calculate_clustering_metrics(
   norm_list = banksy_norm,
-  ground_truth_col = "cell_type"
+  ground_truth_col = "layer_guess"
 )
 
 ranking_df <- rank_normalization_methods(
@@ -29,8 +34,4 @@ ranking_df <- rank_normalization_methods(
 )
 
 ranking_df
-}
-\description{
-Methods are ranked using the Overall score, calculated
-as the mean of NMI, HOM and COM.
 }
