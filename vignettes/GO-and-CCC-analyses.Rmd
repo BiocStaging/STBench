@@ -133,15 +133,20 @@ if (nrow(go_result$go) > 0L) {
 }
 ```
 
+
 # Cell-cell communication analysis
 
 CellChat is applied independently to each normalised dataset using the same analysis parameters. This allows us to investigate variation in inferred communication patterns across normalisation methods.
+
+```{r check-cellchat, include=FALSE}
+has_cellchat <- requireNamespace("CellChat", quietly = TRUE)
+```
 
 ## Prepare data for CellChat
 
 For the mouse example data, we use the mouse CellChat database. Spatial scaling factors and interaction distances must be validated for the coordinate units and spatial technology. The values below are illustrative.
 
-```{r ccc-prepare}
+```{r ccc-prepare, eval=has_cellchat}
 data("CellChatDB.mouse", package = "CellChat")
 ccc_database <- CellChat::CellChatDB.mouse
 ccc_spe <- norm
@@ -156,7 +161,7 @@ contact_range <- 25
 
 This workflow requires CellChat and sufficient ligand-receptor genes. An error is informative if the small example contains too few supported interactions.
 
-```{r ccc-run}
+```{r ccc-run, eval=has_cellchat}
 ccc_results <- run_ccc(
   spelist = ccc_spe,
   celltype_col = celltype_col,
@@ -178,7 +183,7 @@ ccc_results <- run_ccc(
 
 Pathway strengths are summarised using communication probabilities returned by CellChat.
 
-```{r ccc-pathways}
+```{r ccc-pathways, eval=has_cellchat}
 p_ccc_pathways <- plot_ccc_pathways(
   ccc_result = ccc_results,
   top_n = 4,
@@ -192,7 +197,7 @@ p_ccc_pathways
 
 This comparison examines differences in individual inferred interactions and their associated signalling pathways.
 
-```{r ccc-lr}
+```{r ccc-lr, eval=has_cellchat}
 p_ccc_lr <- plot_ccc_lr(
   ccc_result = ccc_results,
   top_n = 15,
@@ -206,7 +211,7 @@ p_ccc_lr
 
 Communication between sender and receiver cell-type groups is summarised for each normalisation method.
 
-```{r ccc-sender-receiver}
+```{r ccc-sender-receiver, eval=has_cellchat}
 p_ccc_sender_receiver <- plot_ccc_sender_receiver(
   ccc_result = ccc_results,
   methods = names(ccc_results),
@@ -219,7 +224,7 @@ p_ccc_sender_receiver
 
 The following code visualises a detected signalling pathway using CellChat's circle layout.
 
-```{r ccc-circle}
+```{r ccc-circle, eval=has_cellchat}
 detected_pathways <- unique(unlist(lapply(
   ccc_results,
   function(x) x$cellchat@netP$pathways
@@ -239,6 +244,7 @@ if (length(detected_pathways) > 0L) {
   }
 }
 ```
+
 
 # Summary
 
