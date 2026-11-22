@@ -1,7 +1,7 @@
 Package: STBench
 Type: Package
 Title: Normalisation and Benchmarking for Spatial Transcriptomics
-Version: 0.99.2
+Version: 0.99.3
 Authors@R:
     person(
         given = "Lahiru",
