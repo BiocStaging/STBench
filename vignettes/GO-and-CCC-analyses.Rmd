@@ -1,5 +1,5 @@
 ---
-title: "Biological interpretation and cell-cell communication with STBench"
+title: "GO-and-CCC-analyses"
 output:
   rmarkdown::html_vignette:
     toc: true

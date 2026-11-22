@@ -46,7 +46,7 @@ norm <- normalize_spe(
     )
   )
 )
-#> norm_none completed in 0.001 mins
+#> norm_none completed in 0 mins
 #> (1/2) Fitting SpaNorm model
 #> Warning: more singular values/vectors requested than available
 #> Warning: You're computing too large a percentage of total singular values, use a standard svd instead.
@@ -101,5 +101,5 @@ norm <- normalize_spe(
 #> iter:  4, iter:  3, log-likelihood: -16621.106109 (converged)
 #> iter:  5, log-likelihood: -16621.106109 (converged)
 #> (2/2) Normalising data
-#> norm_spanorm completed in 0.072 mins
+#> norm_spanorm completed in 0.057 mins
 ```

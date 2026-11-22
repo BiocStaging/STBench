@@ -5,12 +5,12 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Biological interpretation and cell-cell communication with STBench • STBench</title>
+<title>GO-and-CCC-analyses • STBench</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Biological interpretation and cell-cell communication with STBench">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="GO-and-CCC-analyses">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,10 +33,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
-    <li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
-    <li><a class="dropdown-item" href="../articles/GO-and-CCC-analyses.html">Biological interpretation and cell-cell communication with STBench</a></li>
+<li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with STBench</a></li>
     <li><a class="dropdown-item" href="../articles/svg-analysis.html">Spatially variable gene analysis with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/annotation-and-clustering.html">Cell-type annotation and spatial clustering with STBench</a></li>
+    <li><a class="dropdown-item" href="../articles/GO-and-CCC-analyses.html">GO-and-CCC-analyses</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -59,7 +59,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Biological interpretation and cell-cell communication with STBench</h1>
+      <h1>GO-and-CCC-analyses</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/Lahiru-lsb/STBench/blob/HEAD/vignettes/GO-and-CCC-analyses.Rmd" class="external-link"><code>vignettes/GO-and-CCC-analyses.Rmd</code></a></small>
@@ -266,9 +266,9 @@ interactions.</p>
 <span><span class="co">#&gt; The cell groups used for CellChat analysis are  Astrocytes, Cerebellum neurons, Cholinergic and monoaminergic neurons, Choroid plexus epithelial cells, Dentate gyrus granule neurons, Di- and mesencephalon excitatory neurons, Di- and mesencephalon inhibitory neurons, Ependymal cells, Glutamatergic neuroblasts, Hindbrain neurons/Spinal cord neurons, Microglia, Non-glutamatergic neuroblasts, Olfactory inhibitory neurons, Oligodendrocyte precursor cells, Oligodendrocytes, Peptidergic neurons, Pericytes, Perivascular macrophages, Telencephalon inhibitory interneurons, Telencephalon projecting excitatory neurons, Telencephalon projecting inhibitory neurons, Unannotated, Vascular and leptomeningeal cells, Vascular endothelial cells, Vascular smooth muscle cells </span></span>
 <span><span class="co">#&gt; The number of highly variable ligand-receptor pairs used for signaling inference is 94 </span></span>
 <span><span class="co">#&gt; truncatedMean is used for calculating the average gene expression per cell group. </span></span>
-<span><span class="co">#&gt; [1] "&gt;&gt;&gt; Run CellChat on spatial transcriptomics data using distances as constraints of the computed communication probability &lt;&lt;&lt; [2026-11-22 12:09:00.297621]"</span></span>
+<span><span class="co">#&gt; [1] "&gt;&gt;&gt; Run CellChat on spatial transcriptomics data using distances as constraints of the computed communication probability &lt;&lt;&lt; [2026-11-22 13:04:13.59439]"</span></span>
 <span><span class="co">#&gt; The input L-R pairs have both secreted signaling and contact-dependent signaling. Run CellChat in a contact-dependent manner for `Cell-Cell Contact` signaling, and in a diffusion manner based on the `interaction.range` for other L-R pairs. </span></span>
-<span><span class="co">#&gt; [1] "&gt;&gt;&gt; CellChat inference is done. Parameter values are stored in `object@options$parameter` &lt;&lt;&lt; [2026-11-22 12:09:03.539435]"</span></span>
+<span><span class="co">#&gt; [1] "&gt;&gt;&gt; CellChat inference is done. Parameter values are stored in `object@options$parameter` &lt;&lt;&lt; [2026-11-22 13:04:15.172973]"</span></span>
 <span><span class="co">#&gt; The cell-cell communication related with the following cell groups are excluded due to the few number of cells:  Cerebellum neurons, Dentate gyrus granule neurons, Glutamatergic neuroblasts, Non-glutamatergic neuroblasts, Olfactory inhibitory neurons !     5.2% interactions are removed!</span></span>
 <span><span class="co">#&gt; [1] "Create a CellChat object from a data matrix"</span></span>
 <span><span class="co">#&gt; Create a CellChat object from spatial transcriptomics data... </span></span>
@@ -276,9 +276,9 @@ interactions.</p>
 <span><span class="co">#&gt; The cell groups used for CellChat analysis are  Astrocytes, Cerebellum neurons, Cholinergic and monoaminergic neurons, Choroid plexus epithelial cells, Dentate gyrus granule neurons, Di- and mesencephalon excitatory neurons, Di- and mesencephalon inhibitory neurons, Ependymal cells, Glutamatergic neuroblasts, Hindbrain neurons/Spinal cord neurons, Microglia, Non-glutamatergic neuroblasts, Olfactory inhibitory neurons, Oligodendrocyte precursor cells, Oligodendrocytes, Peptidergic neurons, Pericytes, Perivascular macrophages, Telencephalon inhibitory interneurons, Telencephalon projecting excitatory neurons, Telencephalon projecting inhibitory neurons, Unannotated, Vascular and leptomeningeal cells, Vascular endothelial cells, Vascular smooth muscle cells </span></span>
 <span><span class="co">#&gt; The number of highly variable ligand-receptor pairs used for signaling inference is 93 </span></span>
 <span><span class="co">#&gt; truncatedMean is used for calculating the average gene expression per cell group. </span></span>
-<span><span class="co">#&gt; [1] "&gt;&gt;&gt; Run CellChat on spatial transcriptomics data using distances as constraints of the computed communication probability &lt;&lt;&lt; [2026-11-22 12:09:08.922961]"</span></span>
+<span><span class="co">#&gt; [1] "&gt;&gt;&gt; Run CellChat on spatial transcriptomics data using distances as constraints of the computed communication probability &lt;&lt;&lt; [2026-11-22 13:04:17.842509]"</span></span>
 <span><span class="co">#&gt; The input L-R pairs have both secreted signaling and contact-dependent signaling. Run CellChat in a contact-dependent manner for `Cell-Cell Contact` signaling, and in a diffusion manner based on the `interaction.range` for other L-R pairs. </span></span>
-<span><span class="co">#&gt; [1] "&gt;&gt;&gt; CellChat inference is done. Parameter values are stored in `object@options$parameter` &lt;&lt;&lt; [2026-11-22 12:09:11.923469]"</span></span>
+<span><span class="co">#&gt; [1] "&gt;&gt;&gt; CellChat inference is done. Parameter values are stored in `object@options$parameter` &lt;&lt;&lt; [2026-11-22 13:04:19.371505]"</span></span>
 <span><span class="co">#&gt; The cell-cell communication related with the following cell groups are excluded due to the few number of cells:  Cerebellum neurons, Dentate gyrus granule neurons, Glutamatergic neuroblasts, Non-glutamatergic neuroblasts, Olfactory inhibitory neurons !     7.8% interactions are removed!</span></span></code></pre></div>
 </div>
 <div class="section level3">
