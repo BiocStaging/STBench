@@ -1,7 +1,7 @@
 Package: STBench
 Type: Package
 Title: Normalisation and Benchmarking for Spatial Transcriptomics
-Version: 0.99.7
+Version: 0.99.8
 Authors@R:
     person(
         given = "Lahiru",
@@ -59,7 +59,8 @@ Suggests:
     aricode,
     clevr,
     org.Mm.eg.db,
-    presto
+    presto,
+    BiocParallel
 URL: https://lahiru-lsb.github.io/STBench/
 VignetteBuilder: knitr
 biocViews: Spatial, GeneExpression, Normalization,
