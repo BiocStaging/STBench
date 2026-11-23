@@ -26,6 +26,7 @@ svg_results <- run_svg(
   norm_list = norm_example,
   method = "nnSVG",
   n_threads = 1,
+  BPPARAM = BiocParallel::SerialParam(),
   verbose = FALSE
 )
 
@@ -33,4 +34,5 @@ names(svg_results)
 head(as.data.frame(
   SummarizedExperiment::rowData(svg_results[[1]])
 ))
+
 }

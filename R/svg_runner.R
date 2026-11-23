@@ -1,5 +1,5 @@
-# SVG detection
 
+# SVG detection
 
 #' Run spatially variable gene detection
 #'
@@ -16,6 +16,7 @@
 #'   norm_list = norm_example,
 #'   method = "nnSVG",
 #'   n_threads = 1,
+#'   BPPARAM = BiocParallel::SerialParam(),
 #'   verbose = FALSE
 #' )
 #'
@@ -23,11 +24,12 @@
 #' head(as.data.frame(
 #'   SummarizedExperiment::rowData(svg_results[[1]])
 #' ))
+#'
 #' @export
 run_svg <- function(
-  norm_list,
-  method = "nnSVG",
-  ...
+    norm_list,
+    method = "nnSVG",
+    ...
 ) {
   .check_named_list(norm_list)
 
